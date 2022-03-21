@@ -3,7 +3,7 @@ type: structure
 fields:
   posthogfeatureflag:
     label: On Posthog Feature Flag
-    extends: fields/posthog-feature-flag
+    extends: fields/posthog-feature-flags
     max: 1
   showbpage:
     label: Show this Page instead

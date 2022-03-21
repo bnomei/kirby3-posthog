@@ -32,9 +32,9 @@ final class Posthog
             return;
         }
 
-        $apikey = option('posthog.apikey');
+        $apikey = option('bnomei.posthog.apikey');
         $apikey = !is_string($apikey) && is_callable($apikey) ? $apikey() : $apikey;
-        $host = option('posthog.host');
+        $host = option('bnomei.posthog.host');
         $host = !is_string($host) && is_callable($host) ? $host() : $host;
         $options = [];
         if (!empty($host)) {
@@ -44,6 +44,11 @@ final class Posthog
         }
         $this->client = new PosthogClient($apikey, $options);
         \PostHog\PostHog::init(null, [], $this->client);
+    }
+
+    public function isEnabled(): bool
+    {
+        return $this->isEnabled;
     }
 
     public function client(): ?PosthogClient

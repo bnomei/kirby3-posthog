@@ -16,6 +16,7 @@ if (!function_exists('posthog')) {
 
 Kirby::plugin('bnomei/posthog', [
     'options' => [
+        'enabled' => true,
         'apikey' => fn () => null,
         'host' => fn () => null,
         'cache' => true,
@@ -53,7 +54,7 @@ Kirby::plugin('bnomei/posthog', [
         [
             'pattern' => '(:all)',
             'action'  => function ($id) {
-                if ($bpage = site()->posthogABTest(page($id))) {
+                if (posthog()->isEnabled() && $bpage = site()->posthogABTest(page($id))) {
                     return site()->visit($bpage);
                 }
                 return $this->next();
