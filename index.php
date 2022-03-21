@@ -28,15 +28,15 @@ Kirby::plugin('bnomei/posthog', [
         'posthogFeatureFlags' => require __DIR__ . '/collections/posthogFeatureFlags.php',
     ],
     'siteMethods' => [
-        'posthogFeatureFlags' => function(?string $distinctId = null, array $groups = []) {
+        'posthogFeatureFlags' => function (?string $distinctId = null, array $groups = []) {
             return kirby()->collection('posthogFeatureFlags')($distinctId, $groups);
         },
-        'posthogABTest' => function($page) {
+        'posthogABTest' => function ($page) {
             if (!$page || $page->abtests()->isEmpty()) {
                 return null;
             }
             $distinctId = posthog()->identify([]); // TODO: message
-            foreach($page->abtests()->toStructure() as $test) {
+            foreach ($page->abtests()->toStructure() as $test) {
                 if (posthog()->isFeatureEnabled(
                     (string) $test->posthogfeatureflag(),
                     $distinctId
