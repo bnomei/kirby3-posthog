@@ -1,0 +1,41 @@
+{
+    "name": "bnomei/kirby3-posthog",
+    "license": "MIT",
+    "description": "Kirby 3 wrapper for Posthog",
+    "type": "kirby-plugin",
+    "version": "1.0.0",
+    "authors": [
+        {
+            "name": "Bruno Meilick",
+            "email": "b@bnomei.com"
+        }
+    ],
+    "keywords": [
+        "kirby3",
+        "kirby3-cms",
+        "kirby3-plugin",
+        "posthog",
+        "analytics"
+    ],
+    "autoload": {
+        "psr-4": {
+            "Bnomei\\": "classes/"
+        }
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true
+    },
+    "require": {
+        "php": ">=7.4.0",
+        "posthog/posthog-php": "^2.1",
+        "getkirby/composer-installer": "^1.2"
+    },
+    "scripts": {
+        "fix": "php-cs-fixer fix",
+        "dist": [
+            "composer install --no-dev --optimize-autoloader",
+            "git rm -rf --cached .; git add .;"
+        ]
+    }
+}
