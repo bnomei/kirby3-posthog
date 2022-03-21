@@ -56,6 +56,8 @@ final class Posthog
         if ($this->client && $this->isEnabled) {
             return $this->client::{$name}($arguments);
         }
+
+        return null;
     }
 
     private static $singleton = null;

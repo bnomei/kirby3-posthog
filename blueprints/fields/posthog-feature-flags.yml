@@ -1,0 +1,9 @@
+label: Posthog Feature Flags
+type: multiselect
+options: query
+query:
+  fetch: kirby.collection('posthogFeatureFlags')
+  text: "{{ arrayItem.text }}"
+  value: "{{ arrayItem.value }}"
+help: Block only visible when EMPTY or ALL of the feature flags are active on Posthog
+help: Block only visible when EMPTY or ALL of the feature flags are active on Posthog
