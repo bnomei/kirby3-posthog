@@ -21,6 +21,7 @@ Kirby::plugin('bnomei/posthog', [
         'cache' => true,
     ],
     'blueprints' => [
+        'fields/posthog-abtests' => __DIR__ . '/blueprints/fields/posthog-abtests.yml',
         'fields/posthog-feature-flags' => __DIR__ . '/blueprints/fields/posthog-feature-flags.yml',
     ],
     'collections' => [
