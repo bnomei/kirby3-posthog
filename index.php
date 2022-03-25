@@ -35,15 +35,23 @@ Kirby::plugin('bnomei/posthog', [
     ],
     'pageMethods' => [
         'posthogCapturePageView' => function (?string $distinctId = null, array $properties = []) {
+            $url =  $this->url();
+            $event = '$pageview';
+
             if ($this->intendedTemplate() == 'error') {
-                // posthog()->option('error_reporting')
-                return null;
+                if (posthog()->option('error_reporting')) {
+                    $url = url(kirby()->request()->path());
+                    $event = t('posthog.page-not-found', 'page not found');
+                } else {
+                    return null; // exit
+                }
             }
+
             return posthog()->capture([
                 'distinctId' => $distinctId ?? site()->kirbyUserId(),
-                'event' => '$pageview',
+                'event' => $event,
                 'properties' => array_merge([
-                    '$current_url' => $this->url(),
+                    '$current_url' => $url,
                 ], $properties),
             ]);
         },
@@ -84,19 +92,5 @@ Kirby::plugin('bnomei/posthog', [
                 return $this->next();
             }
         ]
-    ],
-    'hooks' => [
-        'route:after' => function (Kirby\Http\Route $route, string $path, string $method, mixed $result, bool $final) {
-            if ($result === null && posthog()->option('error_reporting')) {
-                // page not found
-                posthog()->capture([
-                    'distinctId' => $distinctId ?? site()->kirbyUserId(),
-                    'event' => t('posthog.page-not-found', 'page not found'),
-                    'properties' => [
-                        '$current_url' => url($path),
-                    ],
-                ]);
-            }
-        }
     ],
 ]);
