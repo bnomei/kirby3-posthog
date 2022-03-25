@@ -2,8 +2,7 @@
 
 namespace Bnomei;
 
-use Exception;
-use ReflectionClass;
+use Kirby\Toolkit\A;
 
 /**
  * @method init(?string $apiKey = null, ?array $options = [], ?PosthogClient $client = null): void
@@ -22,33 +21,60 @@ final class Posthog
     private ?PosthogClient $client = null;
     private bool $isEnabled;
 
-    public function __construct()
+    /**
+     * @var array
+     */
+    private $options;
+
+    public function __construct(array $options = [])
     {
-        $this->isEnabled = option('bnomei.posthog.enabled') !== false;
-        if (kirby()->system()->isLocal() && option('bnomei.posthog.enabled') !== 'force') {
-            $this->isEnabled = false;
-        }
-        if ($this->isEnabled === false) {
-            return;
+        if (option('debug')) {
+            kirby()->cache('bnomei.posthog')->flush();
         }
 
-        $apikey = option('bnomei.posthog.apikey');
-        $apikey = !is_string($apikey) && is_callable($apikey) ? $apikey() : $apikey;
-        $host = option('bnomei.posthog.host');
-        $host = !is_string($host) && is_callable($host) ? $host() : $host;
-        $options = [];
-        if (!empty($host)) {
-            $options = [
-                'host' => $host, // You can remove this line if you're using app.posthog.com
-            ];
+        $defaults = [
+            'debug' => option('debug'),
+            'enabled' => option('bnomei.posthog.enabled'),
+            'error_reporting' => option('bnomei.posthog.error_reporting'),
+            'apikey' => option('bnomei.posthog.apikey'),
+            'host' => option('bnomei.posthog.host'),
+            'userid' => option('bnomei.posthog.userid'),
+        ];
+        $this->options = array_merge($defaults, $options);
+
+        foreach ($this->options as $key => $call) {
+            if (is_callable($call) && in_array($key, ['apikey', 'host', 'error_reporting'])) {
+                $this->options[$key] = $call();
+            }
         }
-        $this->client = new PosthogClient($apikey, $options);
+
+        if (kirby()->system()->isLocal() && $this->options['enabled'] !== 'force') {
+            $this->options['enabled'] = false;
+        } elseif ($this->options['enabled'] === 'force') {
+            $this->options['enabled'] = true;
+        }
+
+        if ($this->options['enabled'] === false) {
+            return; // do not creat a client
+        }
+
+        $this->client = new PosthogClient($this->options['apikey'], [
+            'host' => $this->options['host'],
+        ]);
         \PostHog\PostHog::init(null, [], $this->client);
+    }
+
+    public function option(?string $key = null)
+    {
+        if ($key) {
+            return A::get($this->options, $key);
+        }
+        return $this->options;
     }
 
     public function isEnabled(): bool
     {
-        return $this->isEnabled;
+        return $this->options['enabled'];
     }
 
     public function client(): ?PosthogClient
@@ -58,8 +84,8 @@ final class Posthog
 
     public function __call(string $name, array $arguments)
     {
-        if ($this->client && $this->isEnabled) {
-            return $this->client::{$name}($arguments);
+        if ($this->client && $this->options['enabled']) {
+            return $this->client->{$name}(...$arguments);
         }
 
         return null;
@@ -67,10 +93,10 @@ final class Posthog
 
     private static $singleton = null;
 
-    public static function singleton(): self
+    public static function singleton(array $options = []): self
     {
         if (!static::$singleton) {
-            static::$singleton = new self();
+            static::$singleton = new self($options);
         }
         return static::$singleton;
     }

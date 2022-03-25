@@ -16,10 +16,13 @@ class PosthogClient extends Client
         $cacheKey = md5($distinctId . implode('', $groups));
         $cache = kirby()->cache('bnomei.posthog')->get($cacheKey);
         if (!$cache) {
-            $cache = json_decode($this->decide($distinctId, $groups), true);
-            kirby()->cache('bnomei.posthog')->set($cacheKey, $cache, option('bnomei.posthog.featureflags', 1));
+            $cache = json_decode($this->decide($distinctId, $groups), true) ?? [];
+            kirby()->cache('bnomei.posthog')->set(
+                $cacheKey,
+                $cache,
+                option('bnomei.posthog.featureflags', 1)
+            );
         }
-
         return A::get($cache, 'featureFlags', []);
     }
 }

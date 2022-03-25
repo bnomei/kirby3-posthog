@@ -17,8 +17,10 @@ if (!function_exists('posthog')) {
 Kirby::plugin('bnomei/posthog', [
     'options' => [
         'enabled' => true,
+        'userid' => 'id', // or email
         'apikey' => fn () => null,
-        'host' => fn () => null,
+        'host' => fn () => 'https://app.posthog.com',
+        'error_reporting' => false,
         'cache' => true,
     ],
     'blueprints' => [
@@ -28,7 +30,29 @@ Kirby::plugin('bnomei/posthog', [
     'collections' => [
         'posthogFeatureFlags' => require __DIR__ . '/collections/posthogFeatureFlags.php',
     ],
+    'snippets' => [
+        'posthog' => __DIR__ . '/snippets/script-posthog.php',
+    ],
+    'pageMethods' => [
+        'posthogCapturePageView' => function (?string $distinctId = null, array $properties = []) {
+            if ($this->intendedTemplate() == 'error') {
+                // posthog()->option('error_reporting')
+                return null;
+            }
+            return posthog()->capture([
+                'distinctId' => $distinctId ?? site()->kirbyUserId(),
+                'event' => '$pageview',
+                'properties' => array_merge([
+                    '$current_url' => $this->url(),
+                ], $properties),
+            ]);
+        },
+    ],
     'siteMethods' => [
+        'kirbyUserId' => function (): ?string {
+            $field = option('bnomei.posthog.userid');
+            return kirby()->user() ? kirby()->user()->{$field}() : null;
+        },
         'posthogFeatureFlags' => function (?string $distinctId = null, array $groups = []) {
             return kirby()->collection('posthogFeatureFlags')($distinctId, $groups);
         },
@@ -60,5 +84,19 @@ Kirby::plugin('bnomei/posthog', [
                 return $this->next();
             }
         ]
+    ],
+    'hooks' => [
+        'route:after' => function (Kirby\Http\Route $route, string $path, string $method, mixed $result, bool $final) {
+            if ($result === null && posthog()->option('error_reporting')) {
+                // page not found
+                posthog()->capture([
+                    'distinctId' => $distinctId ?? site()->kirbyUserId(),
+                    'event' => t('posthog.page-not-found', 'page not found'),
+                    'properties' => [
+                        '$current_url' => url($path),
+                    ],
+                ]);
+            }
+        }
     ],
 ]);
