@@ -70,7 +70,7 @@ return [
 Output the tracking Javascript via the snippet included in the plugin.
 
 ```php
-  snippet('posthog');
+  <?php snippet('posthog'); ?>
   </body>
 </html>
 ```
