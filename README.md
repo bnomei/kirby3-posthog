@@ -65,6 +65,18 @@ return [
 
 ## Usage
 
+### Javascript
+
+Output the tracking Javascript via the snippet included in the plugin.
+
+```php
+  snippet('posthog');
+  </body>
+</html>
+```
+
+### PHP
+
 Use the `posthog()`-helper to access Posthog. You can use all methods from the [Posthog PHP library](https://github.com/PostHog/posthog-php).
 
 ```php
