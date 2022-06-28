@@ -7,7 +7,7 @@
 [![Maintainability](https://flat.badgen.net/codeclimate/maintainability/bnomei/kirby3-posthog)](https://codeclimate.com/github/bnomei/kirby3-posthog)
 [![Twitter](https://flat.badgen.net/badge/twitter/bnomei?color=66d9ef)](https://twitter.com/bnomei)
 
-Kirby 3 Plugin for using Posthog
+Kirby 3 Plugin for connecting Kirby to [Posthog](https://posthog.com/)
 
 ## Install
 
