@@ -61,7 +61,7 @@ Kirby::plugin('bnomei/posthog', [
             $field = option('bnomei.posthog.userid');
             return kirby()->user() ? kirby()->user()->{$field}() : null;
         },
-        'posthogFeatureFlags' => function (?string $distinctId = null, array $groups = []) {
+        'posthogFeatureFlags' => function (?string $distinctId = null, array $groups = []): \Kirby\Cms\Collection {
             return kirby()->collection('posthogFeatureFlags')($distinctId, $groups);
         },
         'posthogABTest' => function ($page) {
