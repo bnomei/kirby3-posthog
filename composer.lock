@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "749a5be5cfa08249c301b22b8fe59922",
+    "content-hash": "11a8e0a906540fc5afb81fbe3382fcf2",
     "packages": [
         {
             "name": "getkirby/composer-installer",
@@ -55,26 +55,26 @@
         },
         {
             "name": "posthog/posthog-php",
-            "version": "2.1.1",
+            "version": "3.0.4",
             "source": {
                 "type": "git",
                 "url": "https://github.com/PostHog/posthog-php.git",
-                "reference": "2d426999b35fd164591b1ab8af46699e3a30d8cb"
+                "reference": "a1561fd6a16672fd89545559dd3bfa8992cac7eb"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/PostHog/posthog-php/zipball/2d426999b35fd164591b1ab8af46699e3a30d8cb",
-                "reference": "2d426999b35fd164591b1ab8af46699e3a30d8cb",
+                "url": "https://api.github.com/repos/PostHog/posthog-php/zipball/a1561fd6a16672fd89545559dd3bfa8992cac7eb",
+                "reference": "a1561fd6a16672fd89545559dd3bfa8992cac7eb",
                 "shasum": ""
             },
             "require": {
                 "ext-json": "*",
-                "php": ">=7.1"
+                "php": ">=8.0"
             },
             "require-dev": {
                 "overtrue/phplint": "^3.0",
                 "phpunit/phpunit": "^9.0",
-                "squizlabs/php_codesniffer": "^3.6"
+                "squizlabs/php_codesniffer": "^3.7"
             },
             "bin": [
                 "bin/posthog"
@@ -102,9 +102,9 @@
             ],
             "support": {
                 "issues": "https://github.com/PostHog/posthog-php/issues",
-                "source": "https://github.com/PostHog/posthog-php/tree/2.1.1"
+                "source": "https://github.com/PostHog/posthog-php/tree/3.0.4"
             },
-            "time": "2022-01-21T13:59:53+00:00"
+            "time": "2023-05-19T15:29:21+00:00"
         }
     ],
     "packages-dev": [],
@@ -114,7 +114,7 @@
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": {
-        "php": ">=7.4.0"
+        "php": ">=8.0.0"
     },
     "platform-dev": [],
     "plugin-api-version": "2.3.0"

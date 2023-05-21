@@ -8,18 +8,15 @@ use Kirby\Toolkit\A;
  * @method init(?string $apiKey = null, ?array $options = [], ?PosthogClient $client = null): void
  * @method capture(array $message)
  * @method identify(array $message)
- * @method groupIdentify(array $message)
  * @method isFeatureEnabled(string $key, string $distinctId, $default = false, array $groups = []): bool
- * @method fetchEnabledFeatureFlags(string $distinctId, array $groups = array()): array
+ * @method getAllFlags(string $distinctId, array $groups = array()): array
  * @method alias(array $message)
  * @method raw(array $message)
- * @method validate($msg, $type)
  * @method flush()
  */
 final class Posthog
 {
     private ?PosthogClient $client = null;
-    private bool $isEnabled;
 
     /**
      * @var array

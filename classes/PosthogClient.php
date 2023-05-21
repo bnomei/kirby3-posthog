@@ -7,10 +7,8 @@ use PostHog\Client;
 
 class PosthogClient extends Client
 {
-    /**
-     * @inheritDoc
-     */
-    public function fetchEnabledFeatureFlags(string $distinctId, array $groups = array()): array
+    // override and add caching
+    public function getAllFlags(string $distinctId, array $groups = array(), array $personProperties = array(), array $groupProperties = array(), bool $onlyEvaluateLocally = false): array
     {
         // add caching
         $cacheKey = md5($distinctId . implode('', $groups));

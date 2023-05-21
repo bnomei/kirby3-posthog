@@ -19,8 +19,11 @@ return array(
     'PostHog\\Consumer\\ForkCurl' => $vendorDir . '/posthog/posthog-php/lib/Consumer/ForkCurl.php',
     'PostHog\\Consumer\\LibCurl' => $vendorDir . '/posthog/posthog-php/lib/Consumer/LibCurl.php',
     'PostHog\\Consumer\\Socket' => $vendorDir . '/posthog/posthog-php/lib/Consumer/Socket.php',
+    'PostHog\\FeatureFlag' => $vendorDir . '/posthog/posthog-php/lib/FeatureFlag.php',
     'PostHog\\HttpClient' => $vendorDir . '/posthog/posthog-php/lib/HttpClient.php',
     'PostHog\\HttpResponse' => $vendorDir . '/posthog/posthog-php/lib/HttpResponse.php',
+    'PostHog\\InconclusiveMatchException' => $vendorDir . '/posthog/posthog-php/lib/InconclusiveMatchException.php',
     'PostHog\\PostHog' => $vendorDir . '/posthog/posthog-php/lib/PostHog.php',
     'PostHog\\QueueConsumer' => $vendorDir . '/posthog/posthog-php/lib/QueueConsumer.php',
+    'PostHog\\SizeLimitedHash' => $vendorDir . '/posthog/posthog-php/lib/SizeLimitedHash.php',
 );

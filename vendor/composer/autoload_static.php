@@ -50,10 +50,13 @@ class ComposerStaticInit1eb2b38fe46f17ff9c56820ec97ae9d8
         'PostHog\\Consumer\\ForkCurl' => __DIR__ . '/..' . '/posthog/posthog-php/lib/Consumer/ForkCurl.php',
         'PostHog\\Consumer\\LibCurl' => __DIR__ . '/..' . '/posthog/posthog-php/lib/Consumer/LibCurl.php',
         'PostHog\\Consumer\\Socket' => __DIR__ . '/..' . '/posthog/posthog-php/lib/Consumer/Socket.php',
+        'PostHog\\FeatureFlag' => __DIR__ . '/..' . '/posthog/posthog-php/lib/FeatureFlag.php',
         'PostHog\\HttpClient' => __DIR__ . '/..' . '/posthog/posthog-php/lib/HttpClient.php',
         'PostHog\\HttpResponse' => __DIR__ . '/..' . '/posthog/posthog-php/lib/HttpResponse.php',
+        'PostHog\\InconclusiveMatchException' => __DIR__ . '/..' . '/posthog/posthog-php/lib/InconclusiveMatchException.php',
         'PostHog\\PostHog' => __DIR__ . '/..' . '/posthog/posthog-php/lib/PostHog.php',
         'PostHog\\QueueConsumer' => __DIR__ . '/..' . '/posthog/posthog-php/lib/QueueConsumer.php',
+        'PostHog\\SizeLimitedHash' => __DIR__ . '/..' . '/posthog/posthog-php/lib/SizeLimitedHash.php',
     );
 
     public static function getInitializer(ClassLoader $loader)
