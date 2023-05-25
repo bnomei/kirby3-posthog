@@ -4,20 +4,21 @@ use Kirby\Cms\Collection;
 use Kirby\Toolkit\Obj;
 
 return function (?string $distinctId = null, ?array $groups = null): Collection {
-    $featureFlags = posthog()->getAllFlags(
+    $data = posthog()->getAllFlags(
         $distinctId ?? site()->posthogDistinctId(),
         $groups ?? []
     );
-    if ($featureFlags != null) {
-        $featureFlags = array_map(function (string $item) {
-            return new Obj([
+    $featureFlags = [];
+    if ($data != null) {
+        foreach ($data as $key => $value) {
+            $featureFlags[] = new Obj([
                 // needed for panel fields
-                'text' => $item,
-                'value' => $item,
+                'text' => $key . " [" . t('posthog.enabled.'.$value, $value ? 'ENABLED' : 'DISABLED') . "]",
+                'value' => $key,
                 // needed for collection
-                'id' => $item,
+                'id' => $key,
             ]);
-        }, $featureFlags);
+        }
     }
-    return new Collection($featureFlags ?? []);
+    return new Collection($featureFlags);
 };

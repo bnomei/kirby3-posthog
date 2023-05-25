@@ -86,7 +86,7 @@ $page->posthogCapturePageView();
 </html>
 ```
 
-### PHP helper function (recommended)
+### PHP helper function
 
 Use the `posthog()`-helper to access Posthog. You can use all methods from the [Posthog PHP library](https://github.com/PostHog/posthog-php).
 
@@ -103,41 +103,12 @@ posthog()->capture([
 ])
 ```
 
+> NOTE: Using the static class from the official posthog docs is not supported.
+
 In addition to the `posthog()`-helper this plugin adds the following features to the original library.
 
 - Disabled on localhost by default
 - Cache for Feature Flag list - it would otherwise send a http request to your posthog instance every time you access the list. It still will send one for every feature flag check.
-
-### PHP static class
-
-If you want to use the static Posthog class from the [official sdk docs](https://posthog.com/docs/libraries/php) you need to init the plugin in the `ready` config option.
-
-**site/config/config.php**
-```php
-<?php
-
-return [
-    'ready' => function ($kirby) {
-        posthog(); // init the plugin
-        return [];
-    },
-    // other options
-];
-```
-
-**site/template/default.php**
-```php
-<?php
-
-\PostHog\PostHog::capture([
-    'distinctId' => site()->posthogDistinctId(),
-    'event' => 'movie played',
-    'properties' => array(
-        'movieId' => '123',
-        'category' => 'romcom'
-    )
-]);
-```
 
 ## Settings
 

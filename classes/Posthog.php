@@ -45,15 +45,21 @@ final class Posthog
         if ($this->options['enabled'] === false) {
             return; // do not creat a client
         }
+    }
 
-        // create client (Bnomei version with caching for feature flags)
-        $this->client = new PosthogClient(
-            $this->options['apikey'],
-            ['host' => $this->options['host'],],
-            null,
-            $this->options['personalapikey']
-        );
-        \PostHog\PostHog::init(null, [], $this->client);
+    private function getClient(): ?PosthogClient
+    {
+        if (!$this->client) {
+            // create client (Bnomei version with caching for feature flags)
+            $this->client = new PosthogClient(
+                $this->options['apikey'],
+                ['host' => $this->options['host'],],
+                null,
+                $this->options['personalapikey']
+            );
+            \PostHog\PostHog::init(null, [], $this->client);
+        }
+        return $this->client;
     }
 
     public function option(?string $key = null)
@@ -71,13 +77,13 @@ final class Posthog
 
     public function client(): ?PosthogClient
     {
-        return $this->client;
+        return $this->getClient();
     }
 
     public function __call(string $name, array $arguments)
     {
-        if ($this->client && $this->options['enabled']) {
-            return $this->client->{$name}(...$arguments);
+        if ($this->getClient() && $this->options['enabled']) {
+            return $this->getClient()->{$name}(...$arguments);
         }
 
         return null;
