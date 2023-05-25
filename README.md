@@ -2,9 +2,6 @@
 
 ![Release](https://flat.badgen.net/packagist/v/bnomei/kirby3-posthog?color=ae81ff)
 ![Downloads](https://flat.badgen.net/packagist/dt/bnomei/kirby3-posthog?color=272822)
-[![Build Status](https://flat.badgen.net/travis/bnomei/kirby3-posthog)](https://travis-ci.com/bnomei/kirby3-posthog)
-[![Coverage Status](https://flat.badgen.net/coveralls/c/github/bnomei/kirby3-posthog)](https://coveralls.io/github/bnomei/kirby3-posthog)
-[![Maintainability](https://flat.badgen.net/codeclimate/maintainability/bnomei/kirby3-posthog)](https://codeclimate.com/github/bnomei/kirby3-posthog)
 [![Twitter](https://flat.badgen.net/badge/twitter/bnomei?color=66d9ef)](https://twitter.com/bnomei)
 
 Kirby 3 Plugin for connecting Kirby to [Posthog](https://posthog.com/)
@@ -63,8 +60,6 @@ return [
 ];
 ```
 
-## Usage
-
 ### Javascript
 
 Output the tracking Javascript via the snippet included in the plugin.
@@ -75,31 +70,86 @@ Output the tracking Javascript via the snippet included in the plugin.
 </html>
 ```
 
-### PHP
+## Usage
+
+### PHP track pageview
+
+**site/template/default.php**
+```php
+<?php
+// track page view event for current kirby user or identified posthog user
+$page->posthogCapturePageView();
+
+// be careful to not have any whitespace before <html>
+><html>
+    <!-- ... --->
+</html>
+```
+
+### PHP helper function (recommended)
 
 Use the `posthog()`-helper to access Posthog. You can use all methods from the [Posthog PHP library](https://github.com/PostHog/posthog-php).
 
 ```php
+<?php
+
 posthog()->capture([
-    // your capture data
+    'distinctId' => site()->posthogDistinctId(),
+    'event' => 'movie played',
+    'properties' => array(
+        'movieId' => '123',
+        'category' => 'romcom'
+    )
 ])
 ```
-
-## Additional Features
 
 In addition to the `posthog()`-helper this plugin adds the following features to the original library.
 
 - Disabled on localhost by default
-- Cache for Feature Flags - it would send a http request every time you access one otherwise.
+- Cache for Feature Flag list - it would otherwise send a http request to your posthog instance every time you access the list. It still will send one for every feature flag check.
+
+### PHP static class
+
+If you want to use the static Posthog class from the [official sdk docs](https://posthog.com/docs/libraries/php) you need to init the plugin in the `ready` config option.
+
+**site/config/config.php**
+```php
+<?php
+
+return [
+    'ready' => function ($kirby) {
+        posthog(); // init the plugin
+        return [];
+    },
+    // other options
+];
+```
+
+**site/template/default.php**
+```php
+<?php
+
+\PostHog\PostHog::capture([
+    'distinctId' => site()->posthogDistinctId(),
+    'event' => 'movie played',
+    'properties' => array(
+        'movieId' => '123',
+        'category' => 'romcom'
+    )
+]);
+```
 
 ## Settings
 
-| bnomei.posthog.    | Default                   | Description                                                 |
-|--------------------|---------------------------|-------------------------------------------------------------|
-| apikey             | `string or callback`      |                                                             |
-| host               | `string or callback`      |                                                             |
-| enabled            | `true or false or 'force'` | but disabled on localhost setups by default                 |
-| featureflags | `1`                       | duration (in minutes) to cache the feature flags in minutes |
+| bnomei.posthog. | Default                   | Description                                                 |
+|-----------------|---------------------------|-------------------------------------------------------------|
+| apikey          | `string or callback`      |                                                             |
+| personalapikey  | `string or callback`      |                                                             |
+| host            | `string or callback`      |                                                             |
+| enabled         | `true or false or 'force'` | but disabled on localhost setups by default                 |
+| featureflags    | `1`                       | duration (in minutes) to cache the feature flags in minutes |
+
+> Read more about `apikey` and `personalapikey` here: https://posthog.com/docs/api
 
 ## Dependencies
 

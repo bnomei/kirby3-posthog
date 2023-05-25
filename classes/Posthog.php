@@ -4,16 +4,6 @@ namespace Bnomei;
 
 use Kirby\Toolkit\A;
 
-/**
- * @method init(?string $apiKey = null, ?array $options = [], ?PosthogClient $client = null): void
- * @method capture(array $message)
- * @method identify(array $message)
- * @method isFeatureEnabled(string $key, string $distinctId, $default = false, array $groups = []): bool
- * @method getAllFlags(string $distinctId, array $groups = array()): array
- * @method alias(array $message)
- * @method raw(array $message)
- * @method flush()
- */
 final class Posthog
 {
     private ?PosthogClient $client = null;
@@ -34,13 +24,14 @@ final class Posthog
             'enabled' => option('bnomei.posthog.enabled'),
             'error_reporting' => option('bnomei.posthog.error_reporting'),
             'apikey' => option('bnomei.posthog.apikey'),
+            'personalapikey' => option('bnomei.posthog.personalapikey'),
             'host' => option('bnomei.posthog.host'),
             'userid' => option('bnomei.posthog.userid'),
         ];
         $this->options = array_merge($defaults, $options);
 
         foreach ($this->options as $key => $call) {
-            if (is_callable($call) && in_array($key, ['apikey', 'host', 'error_reporting'])) {
+            if (is_callable($call) && in_array($key, ['apikey', 'personalapikey', 'host', 'error_reporting'])) {
                 $this->options[$key] = $call();
             }
         }
@@ -55,9 +46,13 @@ final class Posthog
             return; // do not creat a client
         }
 
-        $this->client = new PosthogClient($this->options['apikey'], [
-            'host' => $this->options['host'],
-        ]);
+        // create client (Bnomei version with caching for feature flags)
+        $this->client = new PosthogClient(
+            $this->options['apikey'],
+            ['host' => $this->options['host'],],
+            null,
+            $this->options['personalapikey']
+        );
         \PostHog\PostHog::init(null, [], $this->client);
     }
 

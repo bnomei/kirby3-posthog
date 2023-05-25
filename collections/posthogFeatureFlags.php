@@ -4,8 +4,8 @@ use Kirby\Cms\Collection;
 use Kirby\Toolkit\Obj;
 
 return function (?string $distinctId = null, ?array $groups = null): Collection {
-    $featureFlags = posthog()->fetchEnabledFeatureFlags(
-        $distinctId ?? site()->kirbyUserId(),
+    $featureFlags = posthog()->getAllFlags(
+        $distinctId ?? site()->posthogDistinctId(),
         $groups ?? []
     );
     if ($featureFlags != null) {

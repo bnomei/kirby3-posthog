@@ -17,8 +17,9 @@ if (!function_exists('posthog')) {
 Kirby::plugin('bnomei/posthog', [
     'options' => [
         'enabled' => true,
-        'userid' => 'id', // or email
+        'distinctId' => fn () => kirby()->user() ? kirby()->user()->id() : null, // or email or md5(email)
         'apikey' => fn () => null,
+        'personalapikey' => fn () => null,
         'host' => fn () => 'https://app.posthog.com',
         'error_reporting' => false,
         'cache' => true,
@@ -48,7 +49,7 @@ Kirby::plugin('bnomei/posthog', [
             }
 
             return posthog()->capture([
-                'distinctId' => $distinctId ?? site()->kirbyUserId(),
+                'distinctId' => $distinctId ?? site()->posthogDistinctId(),
                 'event' => $event,
                 'properties' => array_merge([
                     '$current_url' => $url,
@@ -57,9 +58,9 @@ Kirby::plugin('bnomei/posthog', [
         },
     ],
     'siteMethods' => [
-        'kirbyUserId' => function (): ?string {
-            $field = option('bnomei.posthog.userid');
-            return kirby()->user() ? kirby()->user()->{$field}() : null;
+        'posthogDistinctId' => function (): ?string {
+            $distinctId = option('bnomei.posthog.distinctId')();
+            return $distinctId ?? posthog()->identify([]);
         },
         'posthogFeatureFlags' => function (?string $distinctId = null, array $groups = []): \Kirby\Cms\Collection {
             return kirby()->collection('posthogFeatureFlags')($distinctId, $groups);
@@ -68,7 +69,7 @@ Kirby::plugin('bnomei/posthog', [
             if (!$page || $page->abtests()->isEmpty()) {
                 return null;
             }
-            $distinctId = posthog()->identify([]); // TODO: message
+            $distinctId = site()->posthogDistinctId();
             foreach ($page->abtests()->toStructure() as $test) {
                 if (posthog()->isFeatureEnabled(
                     (string) $test->posthogfeatureflag(),

@@ -8,19 +8,19 @@ use PostHog\Client;
 class PosthogClient extends Client
 {
     // override and add caching
-    public function getAllFlags(string $distinctId, array $groups = array(), array $personProperties = array(), array $groupProperties = array(), bool $onlyEvaluateLocally = false): array
+    public function localFlags()
     {
         // add caching
-        $cacheKey = md5($distinctId . implode('', $groups));
+        $cacheKey = md5(__DIR__ . 'localFlags');
         $cache = kirby()->cache('bnomei.posthog')->get($cacheKey);
         if (!$cache) {
-            $cache = json_decode($this->decide($distinctId, $groups), true) ?? [];
+            $cache = parent::localFlags(); // json string or null
             kirby()->cache('bnomei.posthog')->set(
                 $cacheKey,
                 $cache,
                 option('bnomei.posthog.featureflags', 1)
             );
         }
-        return A::get($cache, 'featureFlags', []);
+        return $cache;
     }
 }
