@@ -41,15 +41,11 @@ final class Posthog
         } elseif ($this->options['enabled'] === 'force') {
             $this->options['enabled'] = true;
         }
-
-        if ($this->options['enabled'] === false) {
-            return; // do not creat a client
-        }
     }
 
     private function getClient(): ?PosthogClient
     {
-        if (!$this->client) {
+        if (!$this->client && $this->options['enabled']) {
             // create client (Bnomei version with caching for feature flags)
             $this->client = new PosthogClient(
                 $this->options['apikey'],
