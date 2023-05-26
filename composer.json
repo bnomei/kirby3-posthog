@@ -3,7 +3,7 @@
     "license": "MIT",
     "description": "Kirby 3 wrapper for Posthog",
     "type": "kirby-plugin",
-    "version": "3.1.0",
+    "version": "3.1.1",
     "authors": [
         {
             "name": "Bruno Meilick",

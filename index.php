@@ -36,6 +36,10 @@ Kirby::plugin('bnomei/posthog', [
     ],
     'pageMethods' => [
         'posthogCapturePageView' => function (?string $distinctId = null, array $properties = []) {
+            if (posthog()->isEnabled() === false) {
+                return null;
+            }
+
             $url =  $this->url();
             $event = '$pageview';
 

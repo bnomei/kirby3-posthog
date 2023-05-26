@@ -45,7 +45,7 @@ final class Posthog
 
     private function getClient(): ?PosthogClient
     {
-        if (!$this->client && $this->options['enabled']) {
+        if ($this->isEnabled() && !$this->client) {
             // create client (Bnomei version with caching for feature flags)
             $this->client = new PosthogClient(
                 $this->options['apikey'],
@@ -78,7 +78,7 @@ final class Posthog
 
     public function __call(string $name, array $arguments)
     {
-        if ($this->getClient() && $this->options['enabled']) {
+        if ($this->isEnabled() && $this->getClient()) {
             return $this->getClient()->{$name}(...$arguments);
         }
 
