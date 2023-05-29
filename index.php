@@ -35,7 +35,7 @@ Kirby::plugin('bnomei/posthog', [
         'posthog' => __DIR__ . '/snippets/script-posthog.php',
     ],
     'pageMethods' => [
-        'posthogCapturePageView' => function (?string $distinctId = null, array $properties = []) {
+        'posthogCapturePageViewData' => function (?string $distinctId = null, array $properties = []): ?array {
             if (posthog()->isEnabled() === false) {
                 return null;
             }
@@ -52,13 +52,22 @@ Kirby::plugin('bnomei/posthog', [
                 }
             }
 
-            return posthog()->capture([
+            return [
                 'distinctId' => $distinctId ?? site()->posthogDistinctId(),
                 'event' => $event,
                 'properties' => array_merge([
                     '$current_url' => $url,
                 ], $properties),
-            ]);
+            ];
+        },
+        'posthogCapturePageView' => function (?string $distinctId = null, array $properties = [], bool $return = false): ?array {
+            if (posthog()->isEnabled() === false) {
+                return null;
+            }
+
+            $data = site()->posthogCapturePageViewData($distinctId, $properties);
+
+            return $return ? $data : posthog()->capture($data);
         },
     ],
     'siteMethods' => [
