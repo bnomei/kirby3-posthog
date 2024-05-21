@@ -85,17 +85,30 @@ Kirby::plugin('bnomei/posthog', [
             }
             $distinctId = site()->posthogDistinctId();
             foreach ($page->abtests()->toStructure() as $test) {
-                if (posthog()->isFeatureEnabled(
-                    (string) $test->posthogfeatureflag(),
-                    $distinctId
-                )) {
-                    if ($bpage = $test->showbpage()->toPage()) {
-                        return $bpage;
+                if ($test->posthogvariant()->isNotEmpty()) {
+                    $variant = strval($test->posthogvariant()->value());
+                    if ($variant === posthog()->getFeatureFlag(
+                        (string) $test->posthogfeatureflag(),
+                        $distinctId
+                    )) {
+                        if ($bpage = $test->showbpage()->toPage()) {
+                            return $bpage;
+                        }
+                    }
+                } else {
+                    if (posthog()->isFeatureEnabled(
+                        (string) $test->posthogfeatureflag(),
+                        $distinctId
+                    )) {
+                        if ($bpage = $test->showbpage()->toPage()) {
+                            return $bpage;
+                        }
                     }
                 }
+                
             }
             return null;
-        }
+        },
     ],
     'routes' => [
         [

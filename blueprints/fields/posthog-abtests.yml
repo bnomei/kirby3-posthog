@@ -10,3 +10,7 @@ fields:
     type: pages
     max: 1
     multiple: false
+  posthogvariant:
+    label: Posthog Feature Flag Variant
+    type: text
+    help: only needed in A/B/N tests
