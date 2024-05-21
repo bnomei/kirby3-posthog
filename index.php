@@ -55,6 +55,7 @@ Kirby::plugin('bnomei/posthog', [
             return [
                 'distinctId' => $distinctId ?? site()->posthogDistinctId(),
                 'event' => $event,
+                'send_feature_flags' => true, // https://posthog.com/docs/libraries/php#method-2-set-send_feature_flags-to-true
                 'properties' => array_merge([
                     '$current_url' => $url,
                 ], $properties),

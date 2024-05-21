@@ -28,7 +28,6 @@ class PostHog
         if (null === $client) {
             $apiKey = $apiKey ?: getenv(self::ENV_API_KEY);
 
-
             if (array_key_exists("host", $options)) {
                 $options["host"] = self::cleanHost($options["host"]);
             } else {
@@ -178,7 +177,7 @@ class PostHog
      * @param array $groups
      * @param array $personProperties
      * @param array $groupProperties
-     * @return boolean | string
+     * @return array
      * @throws Exception
      */
     public static function getAllFlags(

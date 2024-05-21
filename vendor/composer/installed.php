@@ -1,9 +1,9 @@
 <?php return array(
     'root' => array(
         'name' => 'bnomei/kirby3-posthog',
-        'pretty_version' => '3.2.0',
-        'version' => '3.2.0.0',
-        'reference' => NULL,
+        'pretty_version' => '3.3.0',
+        'version' => '3.3.0.0',
+        'reference' => null,
         'type' => 'kirby-plugin',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -11,9 +11,9 @@
     ),
     'versions' => array(
         'bnomei/kirby3-posthog' => array(
-            'pretty_version' => '3.2.0',
-            'version' => '3.2.0.0',
-            'reference' => NULL,
+            'pretty_version' => '3.3.0',
+            'version' => '3.3.0.0',
+            'reference' => null,
             'type' => 'kirby-plugin',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
@@ -29,9 +29,9 @@
             'dev_requirement' => false,
         ),
         'posthog/posthog-php' => array(
-            'pretty_version' => '3.0.4',
-            'version' => '3.0.4.0',
-            'reference' => 'a1561fd6a16672fd89545559dd3bfa8992cac7eb',
+            'pretty_version' => '3.3.2',
+            'version' => '3.3.2.0',
+            'reference' => '34301d0f20e20b785d465c574557278d18620f31',
             'type' => 'library',
             'install_path' => __DIR__ . '/../posthog/posthog-php',
             'aliases' => array(),
