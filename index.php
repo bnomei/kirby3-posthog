@@ -17,7 +17,23 @@ if (!function_exists('posthog')) {
 Kirby::plugin('bnomei/posthog', [
     'options' => [
         'enabled' => true,
-        'distinctId' => fn () => kirby()->user() ? kirby()->user()->id() : null, // or email or md5(email)
+        'distinctId' => function() {
+            $kirby = kirby();
+            $id = '';
+            if ($kirby->user()) {
+                return $kirby->user()->id();
+            }
+            if (empty($id)) {
+                $session = $kirby->session()->token();
+                if (empty($session)) {
+                    $kirby->session()->regenerateToken();
+                    $session = $kirby->session()->token();
+                }
+                return md5($session);
+            }
+
+            return $id;
+        },
         'apikey' => fn () => null,
         'personalapikey' => fn () => null,
         'host' => fn () => 'https://app.posthog.com',
@@ -73,8 +89,7 @@ Kirby::plugin('bnomei/posthog', [
     ],
     'siteMethods' => [
         'posthogDistinctId' => function (): ?string {
-            $distinctId = option('bnomei.posthog.distinctId')();
-            return $distinctId ?? posthog()->identify([]);
+            return option('bnomei.posthog.distinctId')();
         },
         'posthogFeatureFlags' => function (?string $distinctId = null, array $groups = []): \Kirby\Cms\Collection {
             return kirby()->collection('posthogFeatureFlags')($distinctId, $groups);
@@ -105,7 +120,7 @@ Kirby::plugin('bnomei/posthog', [
                         }
                     }
                 }
-                
+
             }
             return null;
         },
