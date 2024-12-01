@@ -45,16 +45,17 @@ final class Posthog
 
     private function getClient(): ?PosthogClient
     {
-        if ($this->isEnabled() && !$this->client) {
+        if ($this->isEnabled() && ! $this->client) {
             // create client (Bnomei version with caching for feature flags)
             $this->client = new PosthogClient(
                 $this->options['apikey'],
-                ['host' => $this->options['host'],],
+                ['host' => $this->options['host']],
                 null,
                 $this->options['personalapikey']
             );
             \PostHog\PostHog::init(null, [], $this->client);
         }
+
         return $this->client;
     }
 
@@ -63,6 +64,7 @@ final class Posthog
         if ($key) {
             return A::get($this->options, $key);
         }
+
         return $this->options;
     }
 
@@ -89,9 +91,10 @@ final class Posthog
 
     public static function singleton(array $options = []): self
     {
-        if (!static::$singleton) {
-            static::$singleton = new self($options);
+        if (! self::$singleton) {
+            self::$singleton = new self($options);
         }
-        return static::$singleton;
+
+        return self::$singleton;
     }
 }

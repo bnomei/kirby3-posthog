@@ -1,13 +1,13 @@
 <?php
 
-@include_once __DIR__ . '/vendor/autoload.php';
+@include_once __DIR__.'/vendor/autoload.php';
 
-if (!class_exists('Bnomei\Posthog')) {
-    require_once __DIR__ . '/classes/PosthogClient.php';
-    require_once __DIR__ . '/classes/Posthog.php';
+if (! class_exists('Bnomei\Posthog')) {
+    require_once __DIR__.'/classes/PosthogClient.php';
+    require_once __DIR__.'/classes/Posthog.php';
 }
 
-if (!function_exists('posthog')) {
+if (! function_exists('posthog')) {
     function posthog()
     {
         return \Bnomei\Posthog::singleton();
@@ -17,7 +17,7 @@ if (!function_exists('posthog')) {
 Kirby::plugin('bnomei/posthog', [
     'options' => [
         'enabled' => true,
-        'distinctId' => function() {
+        'distinctId' => function () {
             $kirby = kirby();
             $id = '';
             if ($kirby->user()) {
@@ -29,6 +29,7 @@ Kirby::plugin('bnomei/posthog', [
                     $kirby->session()->regenerateToken();
                     $session = $kirby->session()->token();
                 }
+
                 return md5($session);
             }
 
@@ -41,14 +42,14 @@ Kirby::plugin('bnomei/posthog', [
         'cache' => true,
     ],
     'blueprints' => [
-        'fields/posthog-abtests' => __DIR__ . '/blueprints/fields/posthog-abtests.yml',
-        'fields/posthog-feature-flags' => __DIR__ . '/blueprints/fields/posthog-feature-flags.yml',
+        'fields/posthog-abtests' => __DIR__.'/blueprints/fields/posthog-abtests.yml',
+        'fields/posthog-feature-flags' => __DIR__.'/blueprints/fields/posthog-feature-flags.yml',
     ],
     'collections' => [
-        'posthogFeatureFlags' => require __DIR__ . '/collections/posthogFeatureFlags.php',
+        'posthogFeatureFlags' => require __DIR__.'/collections/posthogFeatureFlags.php',
     ],
     'snippets' => [
-        'posthog' => __DIR__ . '/snippets/script-posthog.php',
+        'posthog' => __DIR__.'/snippets/script-posthog.php',
     ],
     'pageMethods' => [
         'posthogCapturePageViewData' => function (?string $distinctId = null, array $properties = []): ?array {
@@ -56,7 +57,7 @@ Kirby::plugin('bnomei/posthog', [
                 return null;
             }
 
-            $url =  $this->url();
+            $url = $this->url();
             $event = '$pageview';
 
             if ($this->intendedTemplate() == 'error') {
@@ -95,7 +96,7 @@ Kirby::plugin('bnomei/posthog', [
             return kirby()->collection('posthogFeatureFlags')($distinctId, $groups);
         },
         'posthogABTest' => function ($page) {
-            if (!$page || $page->abtests()->isEmpty()) {
+            if (! $page || $page->abtests()->isEmpty()) {
                 return null;
             }
             $distinctId = site()->posthogDistinctId();
@@ -122,18 +123,20 @@ Kirby::plugin('bnomei/posthog', [
                 }
 
             }
+
             return null;
         },
     ],
     'routes' => [
         [
             'pattern' => '(:all)',
-            'action'  => function ($id) {
+            'action' => function ($id) {
                 if (posthog()->isEnabled() && $bpage = site()->posthogABTest(page($id))) {
                     return site()->visit($bpage);
                 }
+
                 return $this->next();
-            }
-        ]
+            },
+        ],
     ],
 ]);

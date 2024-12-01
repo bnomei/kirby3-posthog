@@ -1,9 +1,9 @@
 {
     "name": "bnomei/kirby3-posthog",
     "license": "MIT",
-    "description": "Kirby wrapper for Posthog",
+    "description": "Kirby Plugin for interfacing with Posthog",
     "type": "kirby-plugin",
-    "version": "3.5.1",
+    "version": "5.0.0",
     "authors": [
         {
             "name": "Bruno Meilick",
@@ -17,28 +17,50 @@
         "posthog",
         "analytics"
     ],
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true,
+        "allow-plugins": {
+            "getkirby/composer-installer": true,
+            "pestphp/pest-plugin": true
+        }
+    },
     "autoload": {
         "psr-4": {
             "Bnomei\\": "classes/"
         }
     },
-    "config": {
-        "optimize-autoloader": true,
-        "sort-packages": true,
-        "allow-plugins": {
-            "getkirby/composer-installer": true
-        }
-    },
     "require": {
-        "php": ">=8.1.0",
-        "posthog/posthog-php": "^3.0",
-        "getkirby/composer-installer": "^1.2"
+        "php": ">=8.2",
+        "getkirby/composer-installer": "^1.2",
+        "posthog/posthog-php": "^3.0"
+    },
+    "require-dev": {
+        "getkirby/cms": "^5.0.0-alpha.4",
+        "larastan/larastan": "^v3.0.0",
+        "laravel/pint": "^1.13",
+        "pestphp/pest": "^v3.5.1",
+        "spatie/ray": "^1.39"
     },
     "scripts": {
-        "fix": "php-cs-fixer fix",
+        "stan": "./vendor/bin/phpstan",
+        "fix": "./vendor/bin/pint",
+        "test": "./vendor/bin/pest --profile",
         "dist": [
+            "composer fix",
             "composer install --no-dev --optimize-autoloader",
             "git rm -rf --cached .; git add .;"
+        ],
+        "kirby": [
+            "composer install",
+            "composer update",
+            "composer install --working-dir=tests/kirby --no-dev --optimize-autoloader",
+            "composer update --working-dir=tests/kirby",
+            "sed -i.bak 's/function dump(/function xdump(/g' tests/kirby/config/helpers.php",
+            "sed -i.bak 's/function e(/function xe(/g' tests/kirby/config/helpers.php"
         ]
+    },
+    "extra": {
+        "kirby-cms-path": "tests/kirby"
     }
 }

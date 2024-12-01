@@ -13,12 +13,13 @@ return function (?string $distinctId = null, ?array $groups = null): Collection 
         foreach ($data as $key => $value) {
             $featureFlags[] = new Obj([
                 // needed for panel fields
-                'text' => $key . " [" . t('posthog.enabled.'.$value, $value ? 'ENABLED' : 'DISABLED') . "]",
+                'text' => $key.' ['.t('posthog.enabled.'.$value, $value ? 'ENABLED' : 'DISABLED').']',
                 'value' => $key,
                 // needed for collection
                 'id' => $key,
             ]);
         }
     }
+
     return new Collection($featureFlags);
 };

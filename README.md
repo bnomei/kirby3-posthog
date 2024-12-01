@@ -2,23 +2,13 @@
 
 ![Release](https://flat.badgen.net/packagist/v/bnomei/kirby3-posthog?color=ae81ff)
 
-Kirby Plugin for connecting Kirby to [Posthog](https://posthog.com/)
+Kirby Plugin for interfacing with [Posthog](https://posthog.com/)
 
 ## Install
 
-Using composer:
-
-```bash
-composer require bnomei/kirby3-posthog
-```
-
-Using git submodules:
-
-```bash
-git submodule add https://github.com/bnomei/kirby3-posthog.git site/plugins/kirby3-posthog
-```
-
-Using download & copy: download [the latest release](https://github.com/bnomei/kirby3-posthog/releases) and copy to `site/plugins`
+- unzip [master.zip](https://github.com/bnomei/kirby3-posthog/archive/master.zip) as folder `site/plugins/kirby3-posthog` or
+- `git submodule add https://github.com/bnomei/kirby3-posthog.git site/plugins/kirby3-posthog` or
+- `composer require bnomei/kirby3-posthog`
 
 ## Setup
 
@@ -87,12 +77,13 @@ posthog()->capture([
 ])
 ```
 
-> NOTE: Using the static class from the official posthog docs is not supported.
-
 In addition to the `posthog()`-helper this plugin adds the following features to the original library.
 
 - Disabled on localhost by default
 - Cache for Feature Flag list - it would otherwise send a http request to your posthog instance every time you access the list. It still will send one for every feature flag check.
+
+> [!WARNING]
+> Using the static class from the official Posthog docs is not supported.
 
 ## Settings
 
@@ -104,6 +95,7 @@ In addition to the `posthog()`-helper this plugin adds the following features to
 | enabled         | `true or false or 'force'` | but disabled on localhost setups by default                 |
 | featureflags    | `1`                       | duration (in minutes) to cache the feature flags in minutes |
 
+> [!TIP]
 > Read more about `apikey` and `personalapikey` here: https://posthog.com/docs/api
 
 ## Dependencies
