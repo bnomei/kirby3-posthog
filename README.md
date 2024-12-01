@@ -1,6 +1,8 @@
 # Kirby Posthog
 
-![Release](https://flat.badgen.net/packagist/v/bnomei/kirby3-posthog?color=ae81ff)
+![Release](https://flat.badgen.net/packagist/v/bnomei/kirby3-posthog?color=ae81ff&icon=github&label)
+[![Discord](https://flat.badgen.net/badge/discord/bnomei?color=7289da&icon=discord&label)](https://discordapp.com/users/bnomei)
+[![Buymecoffee](https://flat.badgen.net/badge/icon/donate?icon=buymeacoffee&color=FF813F&label)](https://www.buymeacoffee.com/bnomei)
 
 Kirby Plugin for interfacing with [Posthog](https://posthog.com/)
 
