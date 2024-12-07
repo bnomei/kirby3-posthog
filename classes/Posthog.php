@@ -4,14 +4,16 @@ namespace Bnomei;
 
 use Kirby\Toolkit\A;
 
-final class Posthog
+/**
+ * @method bool capture(array $message)
+ * @method string|null getFeatureFlag(string $key, string $distinctId)
+ * @method string|null isFeatureEnabled(string $key, string $distinctId)
+ */
+class Posthog
 {
     private ?PosthogClient $client = null;
 
-    /**
-     * @var array
-     */
-    private $options;
+    private array $options;
 
     public function __construct(array $options = [])
     {
@@ -59,7 +61,7 @@ final class Posthog
         return $this->client;
     }
 
-    public function option(?string $key = null)
+    public function option(?string $key = null): mixed
     {
         if ($key) {
             return A::get($this->options, $key);
@@ -78,7 +80,7 @@ final class Posthog
         return $this->getClient();
     }
 
-    public function __call(string $name, array $arguments)
+    public function __call(string $name, array $arguments): mixed
     {
         if ($this->isEnabled() && $this->getClient()) {
             return $this->getClient()->{$name}(...$arguments);
@@ -87,11 +89,11 @@ final class Posthog
         return null;
     }
 
-    private static $singleton = null;
+    private static ?self $singleton = null;
 
     public static function singleton(array $options = []): self
     {
-        if (! self::$singleton) {
+        if (self::$singleton === null) {
             self::$singleton = new self($options);
         }
 
