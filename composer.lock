@@ -392,16 +392,16 @@
         },
         {
             "name": "claviska/simpleimage",
-            "version": "4.2.0",
+            "version": "4.2.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/claviska/SimpleImage.git",
-                "reference": "dfbe53c01dae8467468ef2b817c09b786a7839d2"
+                "reference": "ec6d5021e5a7153a2520d64c59b86b6f3c4157c5"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/claviska/SimpleImage/zipball/dfbe53c01dae8467468ef2b817c09b786a7839d2",
-                "reference": "dfbe53c01dae8467468ef2b817c09b786a7839d2",
+                "url": "https://api.github.com/repos/claviska/SimpleImage/zipball/ec6d5021e5a7153a2520d64c59b86b6f3c4157c5",
+                "reference": "ec6d5021e5a7153a2520d64c59b86b6f3c4157c5",
                 "shasum": ""
             },
             "require": {
@@ -433,7 +433,7 @@
             "description": "A PHP class that makes working with images as simple as possible.",
             "support": {
                 "issues": "https://github.com/claviska/SimpleImage/issues",
-                "source": "https://github.com/claviska/SimpleImage/tree/4.2.0"
+                "source": "https://github.com/claviska/SimpleImage/tree/4.2.1"
             },
             "funding": [
                 {
@@ -441,7 +441,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2024-04-15T16:07:16+00:00"
+            "time": "2024-11-22T13:25:03+00:00"
         },
         {
             "name": "composer/semver",
@@ -526,29 +526,27 @@
         },
         {
             "name": "doctrine/deprecations",
-            "version": "1.1.3",
+            "version": "1.1.4",
             "source": {
                 "type": "git",
                 "url": "https://github.com/doctrine/deprecations.git",
-                "reference": "dfbaa3c2d2e9a9df1118213f3b8b0c597bb99fab"
+                "reference": "31610dbb31faa98e6b5447b62340826f54fbc4e9"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/doctrine/deprecations/zipball/dfbaa3c2d2e9a9df1118213f3b8b0c597bb99fab",
-                "reference": "dfbaa3c2d2e9a9df1118213f3b8b0c597bb99fab",
+                "url": "https://api.github.com/repos/doctrine/deprecations/zipball/31610dbb31faa98e6b5447b62340826f54fbc4e9",
+                "reference": "31610dbb31faa98e6b5447b62340826f54fbc4e9",
                 "shasum": ""
             },
             "require": {
                 "php": "^7.1 || ^8.0"
             },
             "require-dev": {
-                "doctrine/coding-standard": "^9",
-                "phpstan/phpstan": "1.4.10 || 1.10.15",
-                "phpstan/phpstan-phpunit": "^1.0",
+                "doctrine/coding-standard": "^9 || ^12",
+                "phpstan/phpstan": "1.4.10 || 2.0.3",
+                "phpstan/phpstan-phpunit": "^1.0 || ^2",
                 "phpunit/phpunit": "^7.5 || ^8.5 || ^9.5",
-                "psalm/plugin-phpunit": "0.18.4",
-                "psr/log": "^1 || ^2 || ^3",
-                "vimeo/psalm": "4.30.0 || 5.12.0"
+                "psr/log": "^1 || ^2 || ^3"
             },
             "suggest": {
                 "psr/log": "Allows logging deprecations via PSR-3 logger implementation"
@@ -556,7 +554,7 @@
             "type": "library",
             "autoload": {
                 "psr-4": {
-                    "Doctrine\\Deprecations\\": "lib/Doctrine/Deprecations"
+                    "Doctrine\\Deprecations\\": "src"
                 }
             },
             "notification-url": "https://packagist.org/downloads/",
@@ -567,9 +565,9 @@
             "homepage": "https://www.doctrine-project.org/",
             "support": {
                 "issues": "https://github.com/doctrine/deprecations/issues",
-                "source": "https://github.com/doctrine/deprecations/tree/1.1.3"
+                "source": "https://github.com/doctrine/deprecations/tree/1.1.4"
             },
-            "time": "2024-01-30T19:34:25+00:00"
+            "time": "2024-12-07T21:18:45+00:00"
         },
         {
             "name": "doctrine/inflector",
@@ -867,21 +865,21 @@
         },
         {
             "name": "getkirby/cms",
-            "version": "5.0.0-alpha.4",
+            "version": "5.0.0-beta.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/getkirby/kirby.git",
-                "reference": "6adc851f1bd7de37933185594622bcc526f518d4"
+                "reference": "896c640c17b1309ebd15b455022d4f7d7787ff9e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/getkirby/kirby/zipball/6adc851f1bd7de37933185594622bcc526f518d4",
-                "reference": "6adc851f1bd7de37933185594622bcc526f518d4",
+                "url": "https://api.github.com/repos/getkirby/kirby/zipball/896c640c17b1309ebd15b455022d4f7d7787ff9e",
+                "reference": "896c640c17b1309ebd15b455022d4f7d7787ff9e",
                 "shasum": ""
             },
             "require": {
                 "christian-riesen/base32": "1.6.0",
-                "claviska/simpleimage": "4.2.0",
+                "claviska/simpleimage": "4.2.1",
                 "composer/semver": "3.4.3",
                 "ext-ctype": "*",
                 "ext-curl": "*",
@@ -898,11 +896,11 @@
                 "getkirby/composer-installer": "^1.2.1",
                 "laminas/laminas-escaper": "2.14.0",
                 "michelf/php-smartypants": "1.8.1",
-                "php": "~8.2.0 || ~8.3.0",
-                "phpmailer/phpmailer": "6.9.2",
+                "php": "~8.2.0 || ~8.3.0 || ~8.4.0",
+                "phpmailer/phpmailer": "6.9.3",
                 "symfony/polyfill-intl-idn": "1.31.0",
                 "symfony/polyfill-mbstring": "1.31.0",
-                "symfony/yaml": "7.1.6"
+                "symfony/yaml": "7.2.0"
             },
             "replace": {
                 "symfony/polyfill-php72": "*"
@@ -967,7 +965,7 @@
                     "type": "custom"
                 }
             ],
-            "time": "2024-11-20T16:09:49+00:00"
+            "time": "2024-12-09T10:13:57+00:00"
         },
         {
             "name": "guzzlehttp/guzzle",
@@ -3713,16 +3711,16 @@
         },
         {
             "name": "phpmailer/phpmailer",
-            "version": "v6.9.2",
+            "version": "v6.9.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/PHPMailer/PHPMailer.git",
-                "reference": "a7b17b42fa4887c92146243f3d2f4ccb962af17c"
+                "reference": "2f5c94fe7493efc213f643c23b1b1c249d40f47e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/PHPMailer/PHPMailer/zipball/a7b17b42fa4887c92146243f3d2f4ccb962af17c",
-                "reference": "a7b17b42fa4887c92146243f3d2f4ccb962af17c",
+                "url": "https://api.github.com/repos/PHPMailer/PHPMailer/zipball/2f5c94fe7493efc213f643c23b1b1c249d40f47e",
+                "reference": "2f5c94fe7493efc213f643c23b1b1c249d40f47e",
                 "shasum": ""
             },
             "require": {
@@ -3782,7 +3780,7 @@
             "description": "PHPMailer is a full-featured email creation and transfer class for PHP",
             "support": {
                 "issues": "https://github.com/PHPMailer/PHPMailer/issues",
-                "source": "https://github.com/PHPMailer/PHPMailer/tree/v6.9.2"
+                "source": "https://github.com/PHPMailer/PHPMailer/tree/v6.9.3"
             },
             "funding": [
                 {
@@ -3790,7 +3788,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2024-10-09T10:07:50+00:00"
+            "time": "2024-11-24T18:04:13+00:00"
         },
         {
             "name": "phpmyadmin/sql-parser",
@@ -6082,16 +6080,16 @@
         },
         {
             "name": "spatie/ray",
-            "version": "1.41.3",
+            "version": "1.41.4",
             "source": {
                 "type": "git",
                 "url": "https://github.com/spatie/ray.git",
-                "reference": "e2ecbc17a493dab635f3cf026858b46f0ccbb053"
+                "reference": "c5dbda0548c1881b30549ccc0b6d485f7471aaa5"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/spatie/ray/zipball/e2ecbc17a493dab635f3cf026858b46f0ccbb053",
-                "reference": "e2ecbc17a493dab635f3cf026858b46f0ccbb053",
+                "url": "https://api.github.com/repos/spatie/ray/zipball/c5dbda0548c1881b30549ccc0b6d485f7471aaa5",
+                "reference": "c5dbda0548c1881b30549ccc0b6d485f7471aaa5",
                 "shasum": ""
             },
             "require": {
@@ -6151,7 +6149,7 @@
             ],
             "support": {
                 "issues": "https://github.com/spatie/ray/issues",
-                "source": "https://github.com/spatie/ray/tree/1.41.3"
+                "source": "https://github.com/spatie/ray/tree/1.41.4"
             },
             "funding": [
                 {
@@ -6163,7 +6161,7 @@
                     "type": "other"
                 }
             ],
-            "time": "2024-12-02T12:33:18+00:00"
+            "time": "2024-12-09T11:32:15+00:00"
         },
         {
             "name": "symfony/clock",
@@ -6996,8 +6994,8 @@
             "type": "library",
             "extra": {
                 "thanks": {
-                    "name": "symfony/polyfill",
-                    "url": "https://github.com/symfony/polyfill"
+                    "url": "https://github.com/symfony/polyfill",
+                    "name": "symfony/polyfill"
                 }
             },
             "autoload": {
@@ -7072,8 +7070,8 @@
             "type": "library",
             "extra": {
                 "thanks": {
-                    "name": "symfony/polyfill",
-                    "url": "https://github.com/symfony/polyfill"
+                    "url": "https://github.com/symfony/polyfill",
+                    "name": "symfony/polyfill"
                 }
             },
             "autoload": {
@@ -7233,8 +7231,8 @@
             "type": "library",
             "extra": {
                 "thanks": {
-                    "name": "symfony/polyfill",
-                    "url": "https://github.com/symfony/polyfill"
+                    "url": "https://github.com/symfony/polyfill",
+                    "name": "symfony/polyfill"
                 }
             },
             "autoload": {
@@ -7391,8 +7389,8 @@
             "type": "library",
             "extra": {
                 "thanks": {
-                    "name": "symfony/polyfill",
-                    "url": "https://github.com/symfony/polyfill"
+                    "url": "https://github.com/symfony/polyfill",
+                    "name": "symfony/polyfill"
                 }
             },
             "autoload": {
@@ -7471,8 +7469,8 @@
             "type": "library",
             "extra": {
                 "thanks": {
-                    "name": "symfony/polyfill",
-                    "url": "https://github.com/symfony/polyfill"
+                    "url": "https://github.com/symfony/polyfill",
+                    "name": "symfony/polyfill"
                 }
             },
             "autoload": {
@@ -8078,20 +8076,21 @@
         },
         {
             "name": "symfony/yaml",
-            "version": "v7.1.6",
+            "version": "v7.2.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/yaml.git",
-                "reference": "3ced3f29e4f0d6bce2170ff26719f1fe9aacc671"
+                "reference": "099581e99f557e9f16b43c5916c26380b54abb22"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/yaml/zipball/3ced3f29e4f0d6bce2170ff26719f1fe9aacc671",
-                "reference": "3ced3f29e4f0d6bce2170ff26719f1fe9aacc671",
+                "url": "https://api.github.com/repos/symfony/yaml/zipball/099581e99f557e9f16b43c5916c26380b54abb22",
+                "reference": "099581e99f557e9f16b43c5916c26380b54abb22",
                 "shasum": ""
             },
             "require": {
                 "php": ">=8.2",
+                "symfony/deprecation-contracts": "^2.5|^3.0",
                 "symfony/polyfill-ctype": "^1.8"
             },
             "conflict": {
@@ -8129,7 +8128,7 @@
             "description": "Loads and dumps YAML files",
             "homepage": "https://symfony.com",
             "support": {
-                "source": "https://github.com/symfony/yaml/tree/v7.1.6"
+                "source": "https://github.com/symfony/yaml/tree/v7.2.0"
             },
             "funding": [
                 {
@@ -8145,7 +8144,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2024-09-25T14:20:29+00:00"
+            "time": "2024-10-23T06:56:12+00:00"
         },
         {
             "name": "ta-tikoma/phpunit-architecture-test",
