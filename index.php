@@ -83,7 +83,7 @@ Kirby::plugin('bnomei/posthog', [
                 'send_feature_flags' => true, // https://posthog.com/docs/libraries/php#method-2-set-send_feature_flags-to-true
                 'properties' => array_merge(array_filter([
                     '$current_url' => $url,
-                    '$session_id' => $sessionId
+                    '$session_id' => $sessionId,
                 ]), $properties),
             ];
         },
