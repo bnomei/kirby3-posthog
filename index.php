@@ -67,13 +67,23 @@ Kirby::plugin('bnomei/posthog', [
                 }
             }
 
+            $sessionId = null;
+            // ph_XXX_posthog -> $sesid.1
+            if ($sessionCookie = A::get($_COOKIE, 'ph_'.posthog()->option('apikey').'_posthog', [])) {
+                if ($sessionId = A::get('$sesid', $sessionCookie, null)) {
+                    if (is_array($sessionId) && count($sessionId) > 1) {
+                        $sessionId = $sessionId[1];
+                    }
+                }
+            }
+
             return [
                 'distinctId' => $distinctId ?? site()->posthogDistinctId(),
                 'event' => $event,
                 'send_feature_flags' => true, // https://posthog.com/docs/libraries/php#method-2-set-send_feature_flags-to-true
                 'properties' => array_merge(array_filter([
                     '$current_url' => $url,
-                    '$session_id' => A::get($_COOKIE, 'posthog_session_id', null), // set in JS
+                    '$session_id' => $sessionId
                 ]), $properties),
             ];
         },
