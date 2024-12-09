@@ -1,5 +1,7 @@
 <?php
 
+use Kirby\Toolkit\A;
+
 @include_once __DIR__.'/vendor/autoload.php';
 
 if (! class_exists('Bnomei\Posthog')) {
@@ -8,7 +10,7 @@ if (! class_exists('Bnomei\Posthog')) {
 }
 
 if (! function_exists('posthog')) {
-    function posthog()
+    function posthog(): \Bnomei\Posthog
     {
         return \Bnomei\Posthog::singleton();
     }
@@ -19,21 +21,17 @@ Kirby::plugin('bnomei/posthog', [
         'enabled' => true,
         'distinctId' => function () {
             $kirby = kirby();
-            $id = '';
             if ($kirby->user()) {
                 return $kirby->user()->id();
             }
-            if (empty($id)) {
-                $session = $kirby->session()->token();
-                if (empty($session)) {
-                    $kirby->session()->regenerateToken();
-                    $session = $kirby->session()->token();
-                }
 
-                return md5($session);
+            $session = $kirby->session()->token();
+            if (empty($session)) {
+                $kirby->session()->regenerateToken();
+                $session = $kirby->session()->token();
             }
 
-            return $id;
+            return sha1(__DIR__.$session);
         },
         'apikey' => fn () => null,
         'personalapikey' => fn () => null,
@@ -69,38 +67,49 @@ Kirby::plugin('bnomei/posthog', [
                 }
             }
 
+            $sessionId = null;
+            // ph_XXX_posthog -> $sesid.1
+            if ($sessionCookie = A::get($_COOKIE, 'ph_'.posthog()->option('apikey').'_posthog', [])) {
+                if ($sessionId = A::get('$sesid', $sessionCookie, null)) {
+                    if (is_array($sessionId) && count($sessionId) > 1) {
+                        $sessionId = $sessionId[1];
+                    }
+                }
+            }
+
             return [
                 'distinctId' => $distinctId ?? site()->posthogDistinctId(),
                 'event' => $event,
                 'send_feature_flags' => true, // https://posthog.com/docs/libraries/php#method-2-set-send_feature_flags-to-true
-                'properties' => array_merge([
+                'properties' => array_merge(array_filter([
                     '$current_url' => $url,
-                ], $properties),
+                    '$session_id' => $sessionId,
+                ]), $properties),
             ];
         },
-        'posthogCapturePageView' => function (?string $distinctId = null, array $properties = [], bool $return = false): ?array {
+        'posthogCapturePageView' => function (?string $distinctId = null, array $properties = [], bool $return = false): null|bool|array {
             if (posthog()->isEnabled() === false) {
                 return null;
             }
 
-            $data = site()->posthogCapturePageViewData($distinctId, $properties);
+            $data = site()->posthogCapturePageViewData($distinctId, $properties); // @phpstan-ignore-line
 
             return $return ? $data : posthog()->capture($data);
         },
     ],
     'siteMethods' => [
         'posthogDistinctId' => function (): ?string {
-            return option('bnomei.posthog.distinctId')();
+            return option('bnomei.posthog.distinctId')(); // @phpstan-ignore-line
         },
         'posthogFeatureFlags' => function (?string $distinctId = null, array $groups = []): \Kirby\Cms\Collection {
-            return kirby()->collection('posthogFeatureFlags')($distinctId, $groups);
+            return kirby()->collection('posthogFeatureFlags')($distinctId, $groups); // @phpstan-ignore-line
         },
-        'posthogABTest' => function ($page) {
-            if (! $page || $page->abtests()->isEmpty()) {
+        'posthogABTest' => function (?\Kirby\Cms\Page $page) {
+            if (! $page || $page->abtests()->isEmpty()) { // @phpstan-ignore-line
                 return null;
             }
             $distinctId = site()->posthogDistinctId();
-            foreach ($page->abtests()->toStructure() as $test) {
+            foreach ($page->abtests()->toStructure() as $test) { // @phpstan-ignore-line
                 if ($test->posthogvariant()->isNotEmpty()) {
                     $variant = strval($test->posthogvariant()->value());
                     if ($variant === posthog()->getFeatureFlag(
