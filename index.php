@@ -70,6 +70,8 @@ Kirby::plugin('bnomei/posthog', [
             $sessionId = null;
             // ph_XXX_posthog -> $sesid.1
             if ($sessionCookie = A::get($_COOKIE, 'ph_'.posthog()->option('apikey').'_posthog', [])) {
+                $sessionCookie = urldecode($sessionCookie);
+                $sessionCookie = json_decode($sessionCookie, true);
                 if ($sessionId = A::get('$sesid', $sessionCookie, null)) {
                     if (is_array($sessionId) && count($sessionId) > 1) {
                         $sessionId = $sessionId[1];
