@@ -25,6 +25,15 @@ Kirby::plugin('bnomei/posthog', [
                 return $kirby->user()->id();
             }
 
+            // ph_XXX_posthog -> distinct_id
+            if ($sessionCookie = A::get($_COOKIE, 'ph_'.posthog()->option('apikey').'_posthog', null)) {
+                $sessionCookie = urldecode($sessionCookie);
+                $sessionCookie = json_decode($sessionCookie, true);
+                if ($distinctId = A::get('distinct_id', $sessionCookie, null)) {
+                    return $distinctId;
+                }
+            }
+
             $session = $kirby->session()->token();
             if (empty($session)) {
                 $kirby->session()->regenerateToken();
@@ -69,7 +78,7 @@ Kirby::plugin('bnomei/posthog', [
 
             $sessionId = null;
             // ph_XXX_posthog -> $sesid.1
-            if ($sessionCookie = A::get($_COOKIE, 'ph_'.posthog()->option('apikey').'_posthog', [])) {
+            if ($sessionCookie = A::get($_COOKIE, 'ph_'.posthog()->option('apikey').'_posthog', null)) {
                 $sessionCookie = urldecode($sessionCookie);
                 $sessionCookie = json_decode($sessionCookie, true);
                 if ($sessionId = A::get('$sesid', $sessionCookie, null)) {
