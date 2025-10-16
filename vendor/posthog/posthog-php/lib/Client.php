@@ -62,6 +62,10 @@ class Client
      */
     public $cohorts;
 
+    /**
+     * @var array
+     */
+    public $featureFlagsByKey;
 
     /**
      * @var SizeLimitedHash
@@ -80,7 +84,7 @@ class Client
         string $apiKey,
         array $options = [],
         ?HttpClient $httpClient = null,
-        string $personalAPIKey = null,
+        ?string $personalAPIKey = null,
         bool $loadFeatureFlags = true,
     ) {
         $this->apiKey = $apiKey;
@@ -100,6 +104,7 @@ class Client
         $this->featureFlags = [];
         $this->groupTypeMapping = [];
         $this->cohorts = [];
+        $this->featureFlagsByKey = [];
         $this->distinctIdsFeatureFlagsReported = new SizeLimitedHash(SIZE_LIMIT);
 
         // Populate featureflags and grouptypemapping if possible
@@ -136,7 +141,6 @@ class Client
         $flags = [];
         if (array_key_exists("send_feature_flags", $message) && $message["send_feature_flags"]) {
             $flags = $this->fetchFeatureVariants($message["distinct_id"], $message["groups"]);
-
         } elseif (count($this->featureFlags) != 0) {
             # Local evaluation is enabled, flags are loaded, so try and get all flags we can without going to the server
             $flags = $this->getAllFlags($message["distinct_id"], $message["groups"], [], [], true);
@@ -262,11 +266,16 @@ class Client
         }
 
         $flagWasEvaluatedLocally = !is_null($result);
+        $requestId = null;
+        $flagDetail = null;
 
         if (!$flagWasEvaluatedLocally && !$onlyEvaluateLocally) {
             try {
-                $featureFlags = $this->fetchFeatureVariants($distinctId, $groups, $personProperties, $groupProperties);
-                if(array_key_exists($key, $featureFlags)) {
+                $response = $this->fetchFlagsResponse($distinctId, $groups, $personProperties, $groupProperties);
+                $requestId = isset($response['requestId']) ? $response['requestId'] : null;
+                $flagDetail = isset($response['flags'][$key]) ? $response['flags'][$key] : null;
+                $featureFlags = $response['featureFlags'] ?? [];
+                if (array_key_exists($key, $featureFlags)) {
                     $result = $featureFlags[$key];
                 } else {
                     $result = null;
@@ -278,11 +287,23 @@ class Client
         }
 
         if ($sendFeatureFlagEvents && !$this->distinctIdsFeatureFlagsReported->contains($key, $distinctId)) {
+            $properties = [
+                '$feature_flag' => $key,
+                '$feature_flag_response' => $result,
+            ];
+
+            if (!is_null($requestId)) {
+                $properties['$feature_flag_request_id'] = $requestId;
+            }
+
+            if (!is_null($flagDetail)) {
+                $properties['$feature_flag_id'] = $flagDetail['metadata']['id'];
+                $properties['$feature_flag_version'] = $flagDetail['metadata']['version'];
+                $properties['$feature_flag_reason'] = $flagDetail['reason']['description'];
+            }
+
             $this->capture([
-                "properties" => [
-                    '$feature_flag' => $key,
-                    '$feature_flag_response' => $result,
-                ],
+                "properties" => $properties,
                 "distinct_id" => $distinctId,
                 "event" => '$feature_flag_called',
                 '$groups' => $groups
@@ -294,6 +315,40 @@ class Client
             return $result;
         }
         return null;
+    }
+
+    /**
+     * @param string $key
+     * @param string $distinctId
+     * @param array $groups
+     * @param array $personProperties
+     * @param array $groupProperties
+     * @return mixed
+     */
+    public function getFeatureFlagPayload(
+        string $key,
+        string $distinctId,
+        array $groups = array(),
+        array $personProperties = array(),
+        array $groupProperties = array(),
+    ): mixed {
+        $results = json_decode(
+            $this->flags($distinctId, $groups, $personProperties, $groupProperties),
+            true
+        );
+
+        if (isset($results['featureFlags'][$key]) === false || $results['featureFlags'][$key] !== true) {
+            return null;
+        }
+
+        $payload = $results['featureFlagPayloads'][$key] ?? null;
+
+        if ($payload === null) {
+            return null;
+        }
+
+        # feature flag payloads are always JSON encoded strings.
+        return json_decode($payload, true);
     }
 
     /**
@@ -320,7 +375,7 @@ class Client
             $groupProperties
         );
         $response = [];
-        $fallbackToDecide = false;
+        $fallbackToFlags = false;
 
         if (count($this->featureFlags) > 0) {
             foreach ($this->featureFlags as $flag) {
@@ -333,17 +388,17 @@ class Client
                         $groupProperties
                     );
                 } catch (InconclusiveMatchException $e) {
-                    $fallbackToDecide = true;
+                    $fallbackToFlags = true;
                 } catch (Exception $e) {
-                    $fallbackToDecide = true;
+                    $fallbackToFlags = true;
                     error_log("[PostHog][Client] Error while computing variant:" . $e->getMessage());
                 }
             }
         } else {
-            $fallbackToDecide = true;
+            $fallbackToFlags = true;
         }
 
-        if ($fallbackToDecide && !$onlyEvaluateLocally) {
+        if ($fallbackToFlags && !$onlyEvaluateLocally) {
             try {
                 $featureFlags = $this->fetchFeatureVariants($distinctId, $groups, $personProperties, $groupProperties);
                 $response = array_merge($response, $featureFlags);
@@ -362,6 +417,9 @@ class Client
         array $personProperties = array(),
         array $groupProperties = array()
     ): bool | string {
+        // Create evaluation cache for flag dependencies
+        $evaluationCache = [];
+
         if ($featureFlag["ensure_experience_continuity"] ?? false) {
             throw new InconclusiveMatchException("Flag has experience continuity enabled");
         }
@@ -385,9 +443,23 @@ class Client
             }
 
             $focusedGroupProperties = $groupProperties[$groupName];
-            return FeatureFlag::matchFeatureFlagProperties($featureFlag, $groups[$groupName], $focusedGroupProperties);
+            return FeatureFlag::matchFeatureFlagProperties(
+                $featureFlag,
+                $groups[$groupName],
+                $focusedGroupProperties,
+                $this->cohorts,
+                $this->featureFlagsByKey,
+                $evaluationCache
+            );
         } else {
-            return FeatureFlag::matchFeatureFlagProperties($featureFlag, $distinctId, $personProperties, $this->cohorts);
+            return FeatureFlag::matchFeatureFlagProperties(
+                $featureFlag,
+                $distinctId,
+                $personProperties,
+                $this->cohorts,
+                $this->featureFlagsByKey,
+                $evaluationCache
+            );
         }
     }
 
@@ -400,15 +472,30 @@ class Client
      */
     public function fetchFeatureVariants(
         string $distinctId,
-        array $groups = array(),
+        array $groups = [],
         array $personProperties = [],
         array $groupProperties = []
     ): array {
-        $flags = json_decode(
-            $this->decide($distinctId, $groups, $personProperties, $groupProperties),
+        $response = $this->fetchFlagsResponse($distinctId, $groups, $personProperties, $groupProperties);
+        return $response['featureFlags'] ?? [];
+    }
+
+    /**
+     * @param string $distinctId
+     * @param array $groups
+     * @return array of feature flags
+     * @throws Exception
+     */
+    private function fetchFlagsResponse(
+        string $distinctId,
+        array $groups = [],
+        array $personProperties = [],
+        array $groupProperties = []
+    ): ?array {
+        return json_decode(
+            $this->flags($distinctId, $groups, $personProperties, $groupProperties),
             true
-        )['featureFlags'] ?? [];
-        return $flags;
+        );
     }
 
     /**
@@ -426,12 +513,17 @@ class Client
         $this->featureFlags = $payload['flags'] ?? [];
         $this->groupTypeMapping = $payload['group_type_mapping'] ?? [];
         $this->cohorts = $payload['cohorts'] ?? [];
+
+        // Build flags by key dictionary for dependency resolution
+        $this->featureFlagsByKey = [];
+        foreach ($this->featureFlags as $flag) {
+            $this->featureFlagsByKey[$flag['key']] = $flag;
+        }
     }
 
 
     public function localFlags()
     {
-
         return $this->httpClient->sendRequest(
             '/api/feature_flag/local_evaluation?send_cohorts&token=' . $this->apiKey,
             null,
@@ -443,7 +535,32 @@ class Client
         )->getResponse();
     }
 
-    public function decide(
+    private function normalizeFeatureFlags(string $response): string
+    {
+        $decoded = json_decode($response, true);
+        if (isset($decoded['flags']) && !empty($decoded['flags'])) {
+            // This is a v4 response, we need to transform it to a v3 response for backwards compatibility
+            $transformedFlags = [];
+            $transformedPayloads = [];
+            foreach ($decoded['flags'] as $key => $flag) {
+                if ($flag['variant'] !== null) {
+                    $transformedFlags[$key] = $flag['variant'];
+                } else {
+                    $transformedFlags[$key] = $flag['enabled'] ?? false;
+                }
+                if (isset($flag['metadata']['payload'])) {
+                    $transformedPayloads[$key] = $flag['metadata']['payload'];
+                }
+            }
+            $decoded['featureFlags'] = $transformedFlags;
+            $decoded['featureFlagPayloads'] = $transformedPayloads;
+            return json_encode($decoded);
+        }
+
+        return $response;
+    }
+
+    public function flags(
         string $distinctId,
         array $groups = array(),
         array $personProperties = [],
@@ -466,8 +583,8 @@ class Client
             $payload["group_properties"] = $groupProperties;
         }
 
-        return $this->httpClient->sendRequest(
-            '/decide/?v=2',
+        $response = $this->httpClient->sendRequest(
+            '/flags/?v=2',
             json_encode($payload),
             [
                 // Send user agent in the form of {library_name}/{library_version} as per RFC 7231.
@@ -478,6 +595,8 @@ class Client
                 "timeout" => $this->featureFlagsRequestTimeout
             ]
         )->getResponse();
+
+        return $this->normalizeFeatureFlags($response);
     }
 
     /**

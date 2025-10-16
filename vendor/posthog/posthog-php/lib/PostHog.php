@@ -6,7 +6,7 @@ use Exception;
 
 class PostHog
 {
-    public const VERSION = '3.0.3';
+    public const VERSION = '3.7.1';
     public const ENV_API_KEY = "POSTHOG_API_KEY";
     public const ENV_HOST = "POSTHOG_HOST";
 
@@ -170,7 +170,31 @@ class PostHog
         );
     }
 
-        /**
+    /**
+     * @param string $key
+     * @param string $distinctId
+     * @param array $groups
+     * @param array $personProperties
+     * @param array $groupProperties
+     * @return mixed
+     */
+    public static function getFeatureFlagPayload(
+        string $key,
+        string $distinctId,
+        array $groups = array(),
+        array $personProperties = array(),
+        array $groupProperties = array(),
+    ): mixed {
+        return self::$client->getFeatureFlagPayload(
+            $key,
+            $distinctId,
+            $groups,
+            $personProperties,
+            $groupProperties
+        );
+    }
+
+    /**
      * get all enabled flags for distinct_id
      *
      * @param string $distinctId
