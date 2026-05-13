@@ -25,5 +25,6 @@ return array(
     'PostHog\\InconclusiveMatchException' => $vendorDir . '/posthog/posthog-php/lib/InconclusiveMatchException.php',
     'PostHog\\PostHog' => $vendorDir . '/posthog/posthog-php/lib/PostHog.php',
     'PostHog\\QueueConsumer' => $vendorDir . '/posthog/posthog-php/lib/QueueConsumer.php',
+    'PostHog\\RequiresServerEvaluationException' => $vendorDir . '/posthog/posthog-php/lib/RequiresServerEvaluationException.php',
     'PostHog\\SizeLimitedHash' => $vendorDir . '/posthog/posthog-php/lib/SizeLimitedHash.php',
 );

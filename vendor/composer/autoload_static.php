@@ -7,30 +7,30 @@ namespace Composer\Autoload;
 class ComposerStaticInit1df4a2b2646419cbe9194a98caa4dcdb
 {
     public static $prefixLengthsPsr4 = array (
-        'P' => 
+        'P' =>
         array (
             'PostHog\\' => 8,
         ),
-        'K' => 
+        'K' =>
         array (
             'Kirby\\' => 6,
         ),
-        'B' => 
+        'B' =>
         array (
             'Bnomei\\' => 7,
         ),
     );
 
     public static $prefixDirsPsr4 = array (
-        'PostHog\\' => 
+        'PostHog\\' =>
         array (
             0 => __DIR__ . '/..' . '/posthog/posthog-php/lib',
         ),
-        'Kirby\\' => 
+        'Kirby\\' =>
         array (
             0 => __DIR__ . '/..' . '/getkirby/composer-installer/src',
         ),
-        'Bnomei\\' => 
+        'Bnomei\\' =>
         array (
             0 => __DIR__ . '/../..' . '/classes',
         ),
@@ -56,6 +56,7 @@ class ComposerStaticInit1df4a2b2646419cbe9194a98caa4dcdb
         'PostHog\\InconclusiveMatchException' => __DIR__ . '/..' . '/posthog/posthog-php/lib/InconclusiveMatchException.php',
         'PostHog\\PostHog' => __DIR__ . '/..' . '/posthog/posthog-php/lib/PostHog.php',
         'PostHog\\QueueConsumer' => __DIR__ . '/..' . '/posthog/posthog-php/lib/QueueConsumer.php',
+        'PostHog\\RequiresServerEvaluationException' => __DIR__ . '/..' . '/posthog/posthog-php/lib/RequiresServerEvaluationException.php',
         'PostHog\\SizeLimitedHash' => __DIR__ . '/..' . '/posthog/posthog-php/lib/SizeLimitedHash.php',
     );
 
