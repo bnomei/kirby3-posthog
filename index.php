@@ -1,5 +1,8 @@
 <?php
 
+use Bnomei\Posthog;
+use Kirby\Cms\Collection;
+use Kirby\Cms\Page;
 use Kirby\Toolkit\A;
 
 @include_once __DIR__.'/vendor/autoload.php';
@@ -10,9 +13,9 @@ if (! class_exists('Bnomei\Posthog')) {
 }
 
 if (! function_exists('posthog')) {
-    function posthog(): \Bnomei\Posthog
+    function posthog(): Posthog
     {
-        return \Bnomei\Posthog::singleton();
+        return Posthog::singleton();
     }
 }
 
@@ -26,11 +29,17 @@ Kirby::plugin('bnomei/posthog', [
             }
 
             // ph_XXX_posthog -> distinct_id
-            if ($sessionCookie = A::get($_COOKIE, 'ph_'.posthog()->option('apikey').'_posthog', null)) {
-                $sessionCookie = urldecode($sessionCookie);
-                $sessionCookie = json_decode($sessionCookie, true);
-                if ($distinctId = A::get($sessionCookie, 'distinct_id', null)) {
-                    return $distinctId;
+            $apikey = posthog()->option('apikey');
+            if (is_string($apikey)) {
+                $sessionCookie = A::get($_COOKIE, 'ph_'.$apikey.'_posthog', null);
+                if (is_string($sessionCookie)) {
+                    $sessionCookie = json_decode(urldecode($sessionCookie), true);
+                    if (is_array($sessionCookie)) {
+                        $distinctId = A::get($sessionCookie, 'distinct_id', null);
+                        if (is_string($distinctId)) {
+                            return $distinctId;
+                        }
+                    }
                 }
             }
 
@@ -78,12 +87,19 @@ Kirby::plugin('bnomei/posthog', [
 
             $sessionId = null;
             // ph_XXX_posthog -> $sesid.1
-            if ($sessionCookie = A::get($_COOKIE, 'ph_'.posthog()->option('apikey').'_posthog', null)) {
-                $sessionCookie = urldecode($sessionCookie);
-                $sessionCookie = json_decode($sessionCookie, true);
-                if ($sessionId = A::get($sessionCookie, '$sesid', null)) {
-                    if (is_array($sessionId) && count($sessionId) > 1) {
-                        $sessionId = $sessionId[1];
+            $apikey = posthog()->option('apikey');
+            if (is_string($apikey)) {
+                $sessionCookie = A::get($_COOKIE, 'ph_'.$apikey.'_posthog', null);
+                if (is_string($sessionCookie)) {
+                    $sessionCookie = json_decode(urldecode($sessionCookie), true);
+                    if (is_array($sessionCookie)) {
+                        $sessionId = A::get($sessionCookie, '$sesid', null);
+                        if (is_array($sessionId) && count($sessionId) > 1) {
+                            $sessionId = $sessionId[1];
+                        }
+                        if (is_string($sessionId) === false) {
+                            $sessionId = null;
+                        }
                     }
                 }
             }
@@ -103,7 +119,11 @@ Kirby::plugin('bnomei/posthog', [
                 return null;
             }
 
-            $data = site()->posthogCapturePageViewData($distinctId, $properties); // @phpstan-ignore-line
+            $data = $this->posthogCapturePageViewData($distinctId, $properties);
+
+            if ($data === null) {
+                return null;
+            }
 
             return $return ? $data : posthog()->capture($data);
         },
@@ -112,10 +132,10 @@ Kirby::plugin('bnomei/posthog', [
         'posthogDistinctId' => function (): ?string {
             return option('bnomei.posthog.distinctId')(); // @phpstan-ignore-line
         },
-        'posthogFeatureFlags' => function (?string $distinctId = null, array $groups = []): \Kirby\Cms\Collection {
+        'posthogFeatureFlags' => function (?string $distinctId = null, array $groups = []): Collection {
             return kirby()->collection('posthogFeatureFlags')($distinctId, $groups); // @phpstan-ignore-line
         },
-        'posthogABTest' => function (?\Kirby\Cms\Page $page) {
+        'posthogABTest' => function (?Page $page) {
             if (! $page || $page->abtests()->isEmpty()) { // @phpstan-ignore-line
                 return null;
             }
