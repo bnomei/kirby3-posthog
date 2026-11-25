@@ -6,31 +6,66 @@ namespace Composer\Autoload;
 
 class ComposerStaticInit1df4a2b2646419cbe9194a98caa4dcdb
 {
+    public static $files = array (
+        '662a729f963d39afe703c9d9b7ab4a8c' => __DIR__ . '/..' . '/symfony/polyfill-php83/bootstrap.php',
+        '2203a247e6fda86070a5e4e07aed533a' => __DIR__ . '/..' . '/symfony/clock/Resources/now.php',
+        'def43f6c87e4f8dfd0c9e1b1bab14fe8' => __DIR__ . '/..' . '/symfony/polyfill-iconv/bootstrap.php',
+        '0e6d7bf4a5811bfa5cf40c5ccd6fae6a' => __DIR__ . '/..' . '/symfony/polyfill-mbstring/bootstrap.php',
+    );
+
     public static $prefixLengthsPsr4 = array (
-        'P' =>
+        'S' => 
         array (
+            'Symfony\\Polyfill\\Php83\\' => 23,
+            'Symfony\\Polyfill\\Mbstring\\' => 26,
+            'Symfony\\Polyfill\\Iconv\\' => 23,
+            'Symfony\\Component\\Clock\\' => 24,
+        ),
+        'P' => 
+        array (
+            'Psr\\Clock\\' => 10,
             'PostHog\\' => 8,
         ),
-        'K' =>
+        'K' => 
         array (
             'Kirby\\' => 6,
         ),
-        'B' =>
+        'B' => 
         array (
             'Bnomei\\' => 7,
         ),
     );
 
     public static $prefixDirsPsr4 = array (
-        'PostHog\\' =>
+        'Symfony\\Polyfill\\Php83\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/symfony/polyfill-php83',
+        ),
+        'Symfony\\Polyfill\\Mbstring\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/symfony/polyfill-mbstring',
+        ),
+        'Symfony\\Polyfill\\Iconv\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/symfony/polyfill-iconv',
+        ),
+        'Symfony\\Component\\Clock\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/symfony/clock',
+        ),
+        'Psr\\Clock\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/psr/clock/src',
+        ),
+        'PostHog\\' => 
         array (
             0 => __DIR__ . '/..' . '/posthog/posthog-php/lib',
         ),
-        'Kirby\\' =>
+        'Kirby\\' => 
         array (
             0 => __DIR__ . '/..' . '/getkirby/composer-installer/src',
         ),
-        'Bnomei\\' =>
+        'Bnomei\\' => 
         array (
             0 => __DIR__ . '/../..' . '/classes',
         ),
@@ -40,24 +75,73 @@ class ComposerStaticInit1df4a2b2646419cbe9194a98caa4dcdb
         'Bnomei\\Posthog' => __DIR__ . '/../..' . '/classes/Posthog.php',
         'Bnomei\\PosthogClient' => __DIR__ . '/../..' . '/classes/PosthogClient.php',
         'Composer\\InstalledVersions' => __DIR__ . '/..' . '/composer/InstalledVersions.php',
+        'DateError' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/DateError.php',
+        'DateException' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/DateException.php',
+        'DateInvalidOperationException' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/DateInvalidOperationException.php',
+        'DateInvalidTimeZoneException' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/DateInvalidTimeZoneException.php',
+        'DateMalformedIntervalStringException' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/DateMalformedIntervalStringException.php',
+        'DateMalformedPeriodStringException' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/DateMalformedPeriodStringException.php',
+        'DateMalformedStringException' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/DateMalformedStringException.php',
+        'DateObjectError' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/DateObjectError.php',
+        'DateRangeError' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/DateRangeError.php',
         'Kirby\\ComposerInstaller\\CmsInstaller' => __DIR__ . '/..' . '/getkirby/composer-installer/src/ComposerInstaller/CmsInstaller.php',
         'Kirby\\ComposerInstaller\\Installer' => __DIR__ . '/..' . '/getkirby/composer-installer/src/ComposerInstaller/Installer.php',
         'Kirby\\ComposerInstaller\\Plugin' => __DIR__ . '/..' . '/getkirby/composer-installer/src/ComposerInstaller/Plugin.php',
         'Kirby\\ComposerInstaller\\PluginInstaller' => __DIR__ . '/..' . '/getkirby/composer-installer/src/ComposerInstaller/PluginInstaller.php',
+        'Override' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/Override.php',
         'PostHog\\Client' => __DIR__ . '/..' . '/posthog/posthog-php/lib/Client.php',
+        'PostHog\\ConditionMatch' => __DIR__ . '/..' . '/posthog/posthog-php/lib/ConditionMatch.php',
         'PostHog\\Consumer' => __DIR__ . '/..' . '/posthog/posthog-php/lib/Consumer.php',
         'PostHog\\Consumer\\File' => __DIR__ . '/..' . '/posthog/posthog-php/lib/Consumer/File.php',
         'PostHog\\Consumer\\ForkCurl' => __DIR__ . '/..' . '/posthog/posthog-php/lib/Consumer/ForkCurl.php',
         'PostHog\\Consumer\\LibCurl' => __DIR__ . '/..' . '/posthog/posthog-php/lib/Consumer/LibCurl.php',
+        'PostHog\\Consumer\\NoOp' => __DIR__ . '/..' . '/posthog/posthog-php/lib/Consumer/NoOp.php',
         'PostHog\\Consumer\\Socket' => __DIR__ . '/..' . '/posthog/posthog-php/lib/Consumer/Socket.php',
+        'PostHog\\ContextScope' => __DIR__ . '/..' . '/posthog/posthog-php/lib/ContextScope.php',
+        'PostHog\\EmailError' => __DIR__ . '/..' . '/posthog/posthog-php/lib/EmailError.php',
+        'PostHog\\EmailStatus' => __DIR__ . '/..' . '/posthog/posthog-php/lib/EmailStatus.php',
+        'PostHog\\EmailWarning' => __DIR__ . '/..' . '/posthog/posthog-php/lib/EmailWarning.php',
+        'PostHog\\Emails' => __DIR__ . '/..' . '/posthog/posthog-php/lib/Emails.php',
+        'PostHog\\EvaluatedFlagRecord' => __DIR__ . '/..' . '/posthog/posthog-php/lib/EvaluatedFlagRecord.php',
+        'PostHog\\ExceptionCapture' => __DIR__ . '/..' . '/posthog/posthog-php/lib/ExceptionCapture.php',
+        'PostHog\\ExceptionPayloadBuilder' => __DIR__ . '/..' . '/posthog/posthog-php/lib/ExceptionPayloadBuilder.php',
         'PostHog\\FeatureFlag' => __DIR__ . '/..' . '/posthog/posthog-php/lib/FeatureFlag.php',
+        'PostHog\\FeatureFlagError' => __DIR__ . '/..' . '/posthog/posthog-php/lib/FeatureFlagError.php',
+        'PostHog\\FeatureFlagEvaluations' => __DIR__ . '/..' . '/posthog/posthog-php/lib/FeatureFlagEvaluations.php',
+        'PostHog\\FeatureFlagEvaluationsHost' => __DIR__ . '/..' . '/posthog/posthog-php/lib/FeatureFlagEvaluationsHost.php',
+        'PostHog\\FeatureFlagResult' => __DIR__ . '/..' . '/posthog/posthog-php/lib/FeatureFlagResult.php',
+        'PostHog\\FlagDefinitionCacheProvider' => __DIR__ . '/..' . '/posthog/posthog-php/lib/FlagDefinitionCacheProvider.php',
         'PostHog\\HttpClient' => __DIR__ . '/..' . '/posthog/posthog-php/lib/HttpClient.php',
+        'PostHog\\HttpException' => __DIR__ . '/..' . '/posthog/posthog-php/lib/HttpException.php',
         'PostHog\\HttpResponse' => __DIR__ . '/..' . '/posthog/posthog-php/lib/HttpResponse.php',
+        'PostHog\\HttpRetryPolicy' => __DIR__ . '/..' . '/posthog/posthog-php/lib/HttpRetryPolicy.php',
         'PostHog\\InconclusiveMatchException' => __DIR__ . '/..' . '/posthog/posthog-php/lib/InconclusiveMatchException.php',
+        'PostHog\\Internal\\ContextualFeatureFlagEvaluationsHost' => __DIR__ . '/..' . '/posthog/posthog-php/lib/Internal/ContextualFeatureFlagEvaluationsHost.php',
+        'PostHog\\Internal\\JsonEncoder' => __DIR__ . '/..' . '/posthog/posthog-php/lib/Internal/JsonEncoder.php',
+        'PostHog\\Internal\\SpanContext' => __DIR__ . '/..' . '/posthog/posthog-php/lib/Internal/SpanContext.php',
+        'PostHog\\OpenTelemetry\\ContextSpanProcessor' => __DIR__ . '/..' . '/posthog/posthog-php/lib/OpenTelemetry/ContextSpanProcessor.php',
         'PostHog\\PostHog' => __DIR__ . '/..' . '/posthog/posthog-php/lib/PostHog.php',
         'PostHog\\QueueConsumer' => __DIR__ . '/..' . '/posthog/posthog-php/lib/QueueConsumer.php',
+        'PostHog\\RequestContext' => __DIR__ . '/..' . '/posthog/posthog-php/lib/RequestContext.php',
         'PostHog\\RequiresServerEvaluationException' => __DIR__ . '/..' . '/posthog/posthog-php/lib/RequiresServerEvaluationException.php',
+        'PostHog\\SendEmailResult' => __DIR__ . '/..' . '/posthog/posthog-php/lib/SendEmailResult.php',
         'PostHog\\SizeLimitedHash' => __DIR__ . '/..' . '/posthog/posthog-php/lib/SizeLimitedHash.php',
+        'PostHog\\StringNormalizer' => __DIR__ . '/..' . '/posthog/posthog-php/lib/StringNormalizer.php',
+        'PostHog\\UnresolvedFlagReason' => __DIR__ . '/..' . '/posthog/posthog-php/lib/UnresolvedFlagReason.php',
+        'PostHog\\Uuid' => __DIR__ . '/..' . '/posthog/posthog-php/lib/Uuid.php',
+        'Psr\\Clock\\ClockInterface' => __DIR__ . '/..' . '/psr/clock/src/ClockInterface.php',
+        'SQLite3Exception' => __DIR__ . '/..' . '/symfony/polyfill-php83/Resources/stubs/SQLite3Exception.php',
+        'Symfony\\Component\\Clock\\Clock' => __DIR__ . '/..' . '/symfony/clock/Clock.php',
+        'Symfony\\Component\\Clock\\ClockAwareTrait' => __DIR__ . '/..' . '/symfony/clock/ClockAwareTrait.php',
+        'Symfony\\Component\\Clock\\ClockInterface' => __DIR__ . '/..' . '/symfony/clock/ClockInterface.php',
+        'Symfony\\Component\\Clock\\DatePoint' => __DIR__ . '/..' . '/symfony/clock/DatePoint.php',
+        'Symfony\\Component\\Clock\\MockClock' => __DIR__ . '/..' . '/symfony/clock/MockClock.php',
+        'Symfony\\Component\\Clock\\MonotonicClock' => __DIR__ . '/..' . '/symfony/clock/MonotonicClock.php',
+        'Symfony\\Component\\Clock\\NativeClock' => __DIR__ . '/..' . '/symfony/clock/NativeClock.php',
+        'Symfony\\Component\\Clock\\Test\\ClockSensitiveTrait' => __DIR__ . '/..' . '/symfony/clock/Test/ClockSensitiveTrait.php',
+        'Symfony\\Polyfill\\Iconv\\Iconv' => __DIR__ . '/..' . '/symfony/polyfill-iconv/Iconv.php',
+        'Symfony\\Polyfill\\Mbstring\\Mbstring' => __DIR__ . '/..' . '/symfony/polyfill-mbstring/Mbstring.php',
+        'Symfony\\Polyfill\\Php83\\Php83' => __DIR__ . '/..' . '/symfony/polyfill-php83/Php83.php',
     );
 
     public static function getInitializer(ClassLoader $loader)

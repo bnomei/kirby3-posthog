@@ -1,9 +1,9 @@
 <?php
 
 use Bnomei\Posthog;
-use Kirby\Cms\Collection;
 use Kirby\Cms\Page;
 use Kirby\Toolkit\A;
+use Kirby\Toolkit\Collection;
 
 @include_once __DIR__.'/vendor/autoload.php';
 
@@ -132,36 +132,22 @@ Kirby::plugin('bnomei/posthog', [
         'posthogDistinctId' => function (): ?string {
             return option('bnomei.posthog.distinctId')(); // @phpstan-ignore-line
         },
-        'posthogFeatureFlags' => function (?string $distinctId = null, array $groups = []): Collection {
-            return kirby()->collection('posthogFeatureFlags')($distinctId, $groups); // @phpstan-ignore-line
+        'posthogFeatureFlags' => function (?string $distinctId = null, array $groups = []): ?Collection {
+            return kirby()->collection('posthogFeatureFlags', compact('distinctId', 'groups'));
         },
         'posthogABTest' => function (?Page $page) {
-            if (! $page || $page->abtests()->isEmpty()) { // @phpstan-ignore-line
+            if (! $page || $page->abtests()->isEmpty() || ! $client = posthog()->client()) { // @phpstan-ignore-line
                 return null;
             }
-            $distinctId = site()->posthogDistinctId();
+            $flags = $client->evaluateFlags(site()->posthogDistinctId());
             foreach ($page->abtests()->toStructure() as $test) { // @phpstan-ignore-line
-                if ($test->posthogvariant()->isNotEmpty()) {
-                    $variant = strval($test->posthogvariant()->value());
-                    if ($variant === posthog()->getFeatureFlag(
-                        (string) $test->posthogfeatureflag(),
-                        $distinctId
-                    )) {
-                        if ($bpage = $test->showbpage()->toPage()) {
-                            return $bpage;
-                        }
-                    }
-                } else {
-                    if (posthog()->isFeatureEnabled(
-                        (string) $test->posthogfeatureflag(),
-                        $distinctId
-                    )) {
-                        if ($bpage = $test->showbpage()->toPage()) {
-                            return $bpage;
-                        }
-                    }
+                $key = (string) $test->posthogfeatureflag();
+                $matches = $test->posthogvariant()->isNotEmpty()
+                    ? (string) $test->posthogvariant() === $flags->getFlag($key)
+                    : $flags->isEnabled($key);
+                if ($matches && $bpage = $test->showbpage()->toPage()) {
+                    return $bpage;
                 }
-
             }
 
             return null;

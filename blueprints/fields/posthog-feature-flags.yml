@@ -1,7 +1,7 @@
 label: Posthog Feature Flags
 type: multiselect
-options: query
-query:
-  fetch: kirby.collection('posthogFeatureFlags')
+options:
+  type: query
+  query: kirby.collection('posthogFeatureFlags')
   text: "{{ arrayItem.text }}"
   value: "{{ arrayItem.value }}"
