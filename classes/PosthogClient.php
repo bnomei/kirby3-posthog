@@ -37,6 +37,6 @@ class PosthogClient extends Client
             intval(option('bnomei.posthog.featureflags', 1))
         );
 
-        return new HttpResponse($response->content(), $response->code());
+        return new HttpResponse($response->content(), $response->code() ?? 0);
     }
 }

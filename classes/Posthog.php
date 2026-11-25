@@ -3,9 +3,9 @@
 namespace Bnomei;
 
 use Kirby\Toolkit\A;
+use PostHog\FeatureFlagEvaluations;
 
 /**
- * @method bool capture(array $message)
  * @method string|null getFeatureFlag(string $key, string $distinctId)
  * @method string|null isFeatureEnabled(string $key, string $distinctId)
  */
@@ -51,7 +51,10 @@ class Posthog
             // create client (Bnomei version with caching for feature flags)
             $this->client = new PosthogClient(
                 $this->options['apikey'],
-                ['host' => $this->options['host']],
+                [
+                    'host' => rtrim(preg_replace('~^https?://~i', '', $this->options['host']), '/'),
+                    'ssl' => ! str_starts_with(strtolower($this->options['host']), 'http://'),
+                ],
                 null,
                 $this->options['personalapikey']
             );
@@ -78,6 +81,24 @@ class Posthog
     public function client(): ?PosthogClient
     {
         return $this->getClient();
+    }
+
+    /**
+     * @param  array{event: string, distinctId?: string, distinct_id?: string, groups?: array<string, mixed>, send_feature_flags?: bool, flags?: FeatureFlagEvaluations, ...}  $message
+     */
+    public function capture(array $message): ?bool
+    {
+        if (! $client = $this->getClient()) {
+            return null;
+        }
+
+        // Preserve the data-only pageview API without evaluating flags until capture.
+        if (! empty($message['send_feature_flags'])) {
+            $message['flags'] ??= $client->evaluateFlags($message['distinctId'] ?? $message['distinct_id'] ?? null, $message['groups'] ?? []);
+            unset($message['send_feature_flags']);
+        }
+
+        return $client->capture($message);
     }
 
     public function __call(string $name, array $arguments): mixed

@@ -2,21 +2,48 @@
 
 namespace PostHog;
 
+use PostHog\Internal\JsonEncoder;
+use Symfony\Component\Clock\Clock;
+use Throwable;
+
+/**
+ * Base class for consumers that batch messages before delivery.
+ *
+ * PHP has no portable in-process background timer, so flush_interval_seconds is enforced
+ * opportunistically when another message is enqueued. Explicit flushes and
+ * destruction still drain pending messages immediately.
+ *
+ * @internal
+ */
 abstract class QueueConsumer extends Consumer
 {
+    use HttpRetryPolicy;
+
+    protected const MAX_BATCH_PAYLOAD_SIZE = 1024 * 1024; // 1MB
+    protected const MAX_BATCH_PAYLOAD_SIZE_HUMAN = (self::MAX_BATCH_PAYLOAD_SIZE / 1024) . 'KB';
+
+    // flushBatch() returns this when the batch may succeed later and should remain queued.
+    protected const FLUSH_BATCH_RETRYABLE_FAILURE = 'retryable_failure';
+
+    // flushBatch() returns this when retrying the same batch would block the queue.
+    protected const FLUSH_BATCH_NON_RETRYABLE_FAILURE = 'non_retryable_failure';
+
     protected $type = "QueueConsumer";
 
     protected $queue;
-    protected $max_queue_size = 1000;
+    protected $max_queue_size = 10000;
     protected $batch_size = 100;
+    protected $flush_interval = 5.0;
+    protected $flush_after = null;
+    protected $retry_cooldown_until = null;
     protected $maximum_backoff_duration = 10000;    // Set maximum waiting limit to 10s
-    protected $host = "app.posthog.com";
+    protected $host = "us.i.posthog.com";
     protected $compress_request = false;
 
     /**
      * Store our api key and options as part of this consumer
      * @param string $apiKey
-     * @param array $options
+     * @param array $options Consumer options.
      */
     public function __construct($apiKey, $options = array())
     {
@@ -26,8 +53,18 @@ abstract class QueueConsumer extends Consumer
             $this->max_queue_size = $options["max_queue_size"];
         }
 
-        if (isset($options["batch_size"])) {
-            $this->batch_size = $options["batch_size"];
+        if (isset($options["batch_size"]) && (int) $options["batch_size"] > 0) {
+            $this->batch_size = (int) $options["batch_size"];
+        }
+
+        if (isset($options["flush_interval_seconds"])) {
+            $flushInterval = $options["flush_interval_seconds"];
+            if (is_int($flushInterval) || is_float($flushInterval)) {
+                $flushInterval = (float) $flushInterval;
+                if (is_finite($flushInterval) && $flushInterval >= 0) {
+                    $this->flush_interval = $flushInterval;
+                }
+            }
         }
 
         if (isset($options["maximum_backoff_duration"])) {
@@ -44,23 +81,35 @@ abstract class QueueConsumer extends Consumer
         }
 
         if (isset($options["compress_request"])) {
-            $this->compress_request = json_decode($options["compress_request"]);
+            $this->compress_request = is_bool($options["compress_request"])
+                ? $options["compress_request"]
+                : (bool) json_decode($options["compress_request"]);
         }
 
         $this->queue = array();
     }
 
+    /**
+     * Flush queued messages when the consumer is destroyed.
+     */
     public function __destruct()
     {
-        // Flush our queue on destruction
-        $this->flush();
+        if ($this->inRetryCooldown()) {
+            return;
+        }
+
+        try {
+            $this->flush();
+        } catch (Throwable $throwable) {
+            error_log('[PostHog][' . $this->type . '] Flush failed during destruction: ' . $throwable->getMessage());
+        }
     }
 
     /**
      * Captures a user action
      *
-     * @param array $message
-     * @return boolean whether the capture call succeeded
+     * @param array<string, mixed> $message Event payload.
+     * @return bool Whether the capture call succeeded.
      */
     public function capture(array $message)
     {
@@ -70,8 +119,8 @@ abstract class QueueConsumer extends Consumer
     /**
      * Tags properties about the user.
      *
-     * @param array $message
-     * @return boolean whether the identify call succeeded
+     * @param array<string, mixed> $message Identify payload.
+     * @return bool Whether the identify call succeeded.
      */
     public function identify(array $message)
     {
@@ -81,8 +130,8 @@ abstract class QueueConsumer extends Consumer
     /**
      * Aliases from one user id to another
      *
-     * @param array $message
-     * @return boolean whether the alias call succeeded
+     * @param array<string, mixed> $message Alias payload.
+     * @return bool Whether the alias call succeeded.
      */
     public function alias(array $message)
     {
@@ -90,7 +139,9 @@ abstract class QueueConsumer extends Consumer
     }
 
     /**
-     * Flushes our queue of messages by batching them to the server
+     * Flushes our queue of messages by batching them to the server.
+     *
+     * @return bool True when all queued batches were sent successfully.
      */
     public function flush()
     {
@@ -98,32 +149,129 @@ abstract class QueueConsumer extends Consumer
         $success = true;
 
         while ($count > 0 && $success) {
-            $batch = array_splice($this->queue, 0, min($this->batch_size, $count));
-            $success = $this->flushBatch($batch);
+            $batchSize = min($this->batch_size, $count);
+            $batch = array_slice($this->queue, 0, $batchSize);
+            $result = $this->flushBatch($batch);
+            $success = true === $result;
+
+            $this->retry_cooldown_until = self::FLUSH_BATCH_RETRYABLE_FAILURE === $result
+                ? $this->now() + $this->maximum_backoff_duration / 1000
+                : null;
+
+            if ($success || self::FLUSH_BATCH_RETRYABLE_FAILURE !== $result) {
+                array_splice($this->queue, 0, $batchSize);
+            }
 
             $count = count($this->queue);
         }
+
+        $this->resetFlushTimer();
 
         return $success;
     }
 
     /**
      * Adds an item to our queue.
-     * @param mixed $item
-     * @return boolean whether call has succeeded
+     * @param mixed $item Queue item to append.
+     * @return bool Whether the call succeeded.
      */
     public function enqueue($item)
     {
         $count = count($this->queue);
 
-        if ($count > $this->max_queue_size) {
+        if ($count >= $this->max_queue_size && $this->retryCooldownExpired()) {
+            $this->flush();
+            $count = count($this->queue);
+        }
+
+        if ($count >= $this->max_queue_size) {
             return false;
         }
 
+        $wasEmpty = $count === 0;
         $count = array_push($this->queue, $item);
 
-        if ($count >= $this->batch_size) {
+        if ($wasEmpty) {
+            $this->resetFlushTimer();
+        }
+
+        if ($this->inRetryCooldown()) {
+            return true;
+        }
+
+        if ($this->flush_interval === 0.0 || $count >= $this->batch_size || $this->flushIntervalElapsed()) {
             return $this->flush(); // return ->flush() result: true on success
+        }
+
+        return true;
+    }
+
+    private function resetFlushTimer(): void
+    {
+        $this->flush_after = count($this->queue) > 0 && $this->flush_interval > 0
+            ? $this->now() + $this->flush_interval
+            : null;
+    }
+
+    private function flushIntervalElapsed(): bool
+    {
+        return $this->flush_after !== null && $this->now() >= $this->flush_after;
+    }
+
+    private function inRetryCooldown(): bool
+    {
+        return $this->retry_cooldown_until !== null && $this->now() < $this->retry_cooldown_until;
+    }
+
+    private function retryCooldownExpired(): bool
+    {
+        return $this->retry_cooldown_until !== null && !$this->inRetryCooldown();
+    }
+
+    private function now(): float
+    {
+        return (float) Clock::get()->now()->format('U.u');
+    }
+
+    /**
+     * Encode a batch and enforce the transport-independent payload size limit.
+     *
+     * The limit applies to the raw JSON body, before transport-specific escaping,
+     * compression, or HTTP framing.
+     *
+     * @param array<int, array<string, mixed>> $batch Batch of messages to encode.
+     * @return string|false Encoded payload, or false when it cannot be sent.
+     */
+    protected function encodeBatchPayload($batch)
+    {
+        $payload = JsonEncoder::encode($this->payload($batch));
+        if (false === $payload) {
+            $this->handleError(json_last_error(), "Failed to encode batch payload: " . json_last_error_msg());
+            return false;
+        }
+
+        if ($this->payloadExceedsSizeLimit($payload)) {
+            return false;
+        }
+
+        return $payload;
+    }
+
+    /**
+     * Check a raw or transport-encoded payload against the batch size limit.
+     *
+     * @param string $payload Payload representation to measure.
+     * @return bool Whether the payload reaches or exceeds the limit.
+     */
+    protected function payloadExceedsSizeLimit($payload)
+    {
+        if (strlen($payload) < self::MAX_BATCH_PAYLOAD_SIZE) {
+            return false;
+        }
+
+        if ($this->debug()) {
+            $msg = "Message size is larger than " . self::MAX_BATCH_PAYLOAD_SIZE_HUMAN;
+            error_log("[PostHog][" . $this->type . "] " . $msg);
         }
 
         return true;
@@ -133,8 +281,8 @@ abstract class QueueConsumer extends Consumer
      * Given a batch of messages the method returns
      * a valid payload.
      *
-     * @param {Array} $batch
-     * @return {Array}
+     * @param array<int, array<string, mixed>> $batch Batch of queued messages.
+     * @return array{batch: array<int, array<string, mixed>>, api_key: string}
      */
     protected function payload($batch)
     {
@@ -142,5 +290,16 @@ abstract class QueueConsumer extends Consumer
             "batch" => $batch,
             "api_key" => $this->apiKey,
         );
+    }
+
+    /**
+     * Get the SDK user agent.
+     *
+     * @return string User agent in the form of {library_name}/{library_version}.
+     */
+    protected function userAgent(): string
+    {
+        return ($this->options['library_name'] ?? PostHog::LIBRARY)
+            . '/' . ($this->options['library_version'] ?? PostHog::VERSION);
     }
 }

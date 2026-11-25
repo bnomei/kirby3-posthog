@@ -3,9 +3,17 @@
 namespace PostHog;
 
 use Closure;
+use Symfony\Component\Clock\Clock;
 
+/**
+ * HTTP client used by the SDK for PostHog API requests.
+ *
+ * @internal
+ */
 class HttpClient
 {
+    use HttpRetryPolicy;
+
     /**
      * @var string
      */
@@ -17,9 +25,9 @@ class HttpClient
     private $useSsl;
 
     /**
-     * @var int
+     * @var int Maximum retry backoff duration in milliseconds.
      */
-    private $maximumBackoffDuration;
+    private $maximumBackoffDurationMs;
 
     /**
      * @var bool
@@ -40,6 +48,17 @@ class HttpClient
      */
     private $curlTimeoutMilliseconds;
 
+    /**
+     * Create an HTTP client.
+     *
+     * @param string $host PostHog host, optionally including an HTTP or HTTPS scheme.
+     * @param bool $useSsl Whether to use HTTPS.
+     * @param int $maximumBackoffDuration Maximum retry backoff duration in milliseconds.
+     * @param bool $compressRequests Whether to gzip request bodies.
+     * @param bool $debug Whether to emit debug logs.
+     * @param Closure|null $errorHandler Optional callback invoked for request errors.
+     * @param int $curlTimeoutMilliseconds Default cURL timeout in milliseconds.
+     */
     public function __construct(
         string $host,
         bool $useSsl = true,
@@ -49,9 +68,13 @@ class HttpClient
         ?Closure $errorHandler = null,
         int $curlTimeoutMilliseconds = 10000
     ) {
-        $this->host = $host;
+        if (preg_match('#^https?://#i', $host, $matches)) {
+            $useSsl = strtolower($matches[0]) === 'https://';
+            $host = substr($host, strlen($matches[0]));
+        }
+        $this->host = rtrim($host, '/');
         $this->useSsl = $useSsl;
-        $this->maximumBackoffDuration = $maximumBackoffDuration;
+        $this->maximumBackoffDurationMs = $maximumBackoffDuration;
         $this->compressRequests = $compressRequests;
         $this->debug = $debug;
         $this->errorHandler = $errorHandler;
@@ -59,12 +82,21 @@ class HttpClient
     }
 
     /**
-     * @param string $path
-     * @param string|null $payload
-     * @param array $extraHeaders
-     * @param array $requestOptions
+     * Send a request to the configured PostHog host.
+     *
+     * @param string $path Request path, including leading slash.
+     * @param string|null $payload JSON request body, or null for no body.
+     * @param array<int, string> $extraHeaders Additional cURL header strings.
+     * @param array{
+     *     shouldRetry?: bool,
+     *     shouldVerify?: bool,
+     *     includeEtag?: bool,
+     *     timeout?: int,
+     *     compressRequest?: bool
+     * } $requestOptions
      * @return HttpResponse
      */
+    // phpcs:ignore Generic.Files.LineLength.TooLong
     public function sendRequest(string $path, ?string $payload, array $extraHeaders = [], array $requestOptions = []): HttpResponse
     {
         $protocol = $this->useSsl ? "https://" : "http://";
@@ -74,10 +106,12 @@ class HttpClient
         $shouldRetry = $requestOptions['shouldRetry'] ?? true;
         $shouldVerify = $requestOptions['shouldVerify'] ?? true;
         $includeEtag = $requestOptions['includeEtag'] ?? false;
+        $compressRequest = $requestOptions['compressRequest'] ?? $this->compressRequests;
 
         do {
             // open connection
             $ch = curl_init();
+            $responseHeaders = [];
 
             if (null !== $payload) {
                 curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
@@ -85,7 +119,7 @@ class HttpClient
 
             $headers = [];
             $headers[] = 'Content-Type: application/json';
-            if ($this->compressRequests) {
+            if ($compressRequest) {
                 $headers[] = 'Content-Encoding: gzip';
             }
 
@@ -105,17 +139,19 @@ class HttpClient
                 curl_setopt($ch, CURLOPT_FRESH_CONNECT, true);
             }
 
-            // Capture response headers if we need to extract ETag
+            // Capture response headers if we need to extract ETag or honor Retry-After.
             if ($includeEtag) {
                 curl_setopt($ch, CURLOPT_HEADER, true);
+            } else {
+                curl_setopt($ch, CURLOPT_HEADERFUNCTION, static function ($ch, string $header) use (&$responseHeaders): int {
+                    $responseHeaders[] = trim($header);
+                    return strlen($header);
+                });
             }
 
             // retry failed requests just once to diminish impact on performance
             $httpResponse = $this->executePost($ch, $includeEtag);
             $responseCode = $httpResponse->getResponseCode();
-
-            //close connection
-            curl_close($ch);
 
             // Handle 304 Not Modified - this is a success, not an error
             if ($responseCode === 304) {
@@ -132,21 +168,22 @@ class HttpClient
 
                 if ($shouldRetry === false) {
                     break;
-                } elseif (($responseCode >= 500 && $responseCode <= 600) || 429 == $responseCode) {
-                    // If status code is greater than 500 and less than 600, it indicates server error
-                    // Error code 429 indicates rate limited.
-                    // Retry uploading in these cases.
-                    usleep($backoff * 1000);
+                } elseif ($this->isRetryableStatus($responseCode)) {
+                    // Retry transient failures. Honor Retry-After up to the maximum backoff, otherwise use
+                    // exponential backoff starting at 100ms.
+                    $delay = $this->retryDelayMilliseconds($responseHeaders, $backoff, $this->maximumBackoffDurationMs);
+                    Clock::get()->sleep($delay / 1000);
                     $backoff *= 2;
-                } elseif ($responseCode >= 400) {
-                    break;
-                } elseif ($responseCode == 0) {
+                } else {
+                    // Do not retry non-transient responses (e.g. 400, 401, 403, 413,
+                    // or responseCode 0 for network errors). PHP sends synchronously in the hosting
+                    // app's request path, so broad retries would slow down the host application.
                     break;
                 }
             } else {
                 break;  // no error
             }
-        } while ($shouldRetry && $backoff < $this->maximumBackoffDuration);
+        } while ($shouldRetry && $backoff < $this->maximumBackoffDurationMs);
 
         return $httpResponse;
     }
@@ -155,6 +192,7 @@ class HttpClient
     {
         $response = curl_exec($ch);
         $responseCode = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+        $curlErrno = curl_errno($ch);
         $etag = null;
 
         if ($includeEtag && $response !== false) {
@@ -168,10 +206,10 @@ class HttpClient
                 $etag = trim($matches[1]);
             }
 
-            return new HttpResponse($body, $responseCode, $etag);
+            return new HttpResponse($body, $responseCode, $etag, $curlErrno);
         }
 
-        return new HttpResponse($response, $responseCode);
+        return new HttpResponse($response, $responseCode, null, $curlErrno);
     }
 
     private function handleError($code, $message)

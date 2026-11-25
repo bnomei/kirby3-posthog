@@ -6,6 +6,11 @@ $vendorDir = dirname(__DIR__);
 $baseDir = dirname($vendorDir);
 
 return array(
+    'Symfony\\Polyfill\\Php83\\' => array($vendorDir . '/symfony/polyfill-php83'),
+    'Symfony\\Polyfill\\Mbstring\\' => array($vendorDir . '/symfony/polyfill-mbstring'),
+    'Symfony\\Polyfill\\Iconv\\' => array($vendorDir . '/symfony/polyfill-iconv'),
+    'Symfony\\Component\\Clock\\' => array($vendorDir . '/symfony/clock'),
+    'Psr\\Clock\\' => array($vendorDir . '/psr/clock/src'),
     'PostHog\\' => array($vendorDir . '/posthog/posthog-php/lib'),
     'Kirby\\' => array($vendorDir . '/getkirby/composer-installer/src'),
     'Bnomei\\' => array($baseDir . '/classes'),

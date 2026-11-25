@@ -34,4 +34,5 @@ node_modules
 /vendor/**/tests/*
 /vendor/**/php4/*
 /vendor/getkirby/composer-installer
-
+/vendor/posthog/posthog-php/scripts/
+/vendor/posthog/posthog-php/sdk_compliance_adapter/

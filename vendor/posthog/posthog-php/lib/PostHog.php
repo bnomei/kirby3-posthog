@@ -4,51 +4,197 @@ namespace PostHog;
 
 use Exception;
 
+/**
+ * Static facade for the default PostHog PHP SDK client.
+ */
 class PostHog
 {
-    public const VERSION = '3.7.3';
+    public const LIBRARY = 'posthog-php';
+    public const VERSION = '4.27.1';
+    public const ENV_PROJECT_TOKEN = "POSTHOG_PROJECT_TOKEN";
+    /**
+     * @deprecated Use ENV_PROJECT_TOKEN. POSTHOG_API_KEY is still read when POSTHOG_PROJECT_TOKEN is unset or blank.
+     */
     public const ENV_API_KEY = "POSTHOG_API_KEY";
     public const ENV_HOST = "POSTHOG_HOST";
 
-    private static Client $client;
+    private static ?Client $client = null;
 
     /**
      * Initializes the default client to use. Uses the libcurl consumer by default.
-     * @param string|null $apiKey your project's API key
-     * @param array|null $options passed straight to the client
-     * @param Client|null $client
-     * @throws Exception
+     *
+     * When $apiKey is omitted or blank, the POSTHOG_PROJECT_TOKEN environment variable is used, then
+     * the older POSTHOG_API_KEY. When no non-empty project token can be resolved, a disabled
+     * no-op client is initialized. When the
+     * host option is omitted, POSTHOG_HOST is used when present. When POSTHOG_RELEASE_ID is set,
+     * its value is sent as $release_id on every event unless the event already carries one.
+     *
+     * @param string|null $apiKey Your project token.
+     * Time-based options use milliseconds unless the option name says otherwise:
+     * `timeout` defaults to 10000ms, `feature_flag_request_timeout_ms` defaults to 3000ms,
+     * and `maximum_backoff_duration` defaults to 10000ms for retry backoff. Retry backoff starts
+     * at 100ms and doubles until capped by `maximum_backoff_duration`. `max_queue_size` defaults
+     * to 10000 events, `batch_size` defaults to 100 events, and `flush_interval_seconds` defaults
+     * to 5 seconds. The interval is checked when another event is enqueued because PHP has no
+     * portable in-process background timer. For the socket consumer, `timeout` is passed to
+     * pfsockopen() and is in seconds. `http_timeout_ms` independently controls SDK HTTP requests,
+     * including local flag-definition fetches. It defaults to 10000ms with the socket consumer,
+     * or inherits `timeout` for other consumers. Direct flag evaluation requests instead use
+     * `feature_flag_request_timeout_ms`.
+     *
+     * Feature flag requests to `/flags/?v=2` retry transient curl/network errors and HTTP 502/504.
+     * `feature_flag_request_max_retries` defaults to 1; set it to 0 to disable these retries.
+     * `disableGeoip` defaults to false for compatibility with existing releases. It applies to events
+     * and remote flag evaluation. Per-call options override this setting; false allows GeoIP enrichment.
+     *
+     * Transactional email (see Client::emails()) uses `app_host`, `email_request_timeout_ms` (default 15000),
+     * `email_request_max_retries` (default 2) and `migrated_from`.
+     *
+     * @param array{
+     *     host?: string,
+     *     app_host?: string,
+     *     email_request_timeout_ms?: int,
+     *     email_request_max_retries?: int,
+     *     migrated_from?: string,
+     *     ssl?: bool,
+     *     timeout?: int|float,
+     *     http_timeout_ms?: int|float,
+     *     verify_batch_events_request?: bool,
+     *     feature_flag_request_timeout_ms?: int,
+     *     feature_flag_request_max_retries?: int,
+     *     maximum_backoff_duration?: int,
+     *     consumer?: 'socket'|'file'|'fork_curl'|'lib_curl'|'noop',
+     *     debug?: bool,
+     *     disableGeoip?: bool,
+     *     max_queue_size?: int,
+     *     batch_size?: int,
+     *     flush_interval_seconds?: int|float,
+     *     compress_request?: bool|string,
+     *     error_handler?: callable,
+     *     before_send?: callable(array<string, mixed>): (array<string, mixed>|null),
+     *     filename?: string,
+     *     flag_definition_cache_provider?: FlagDefinitionCacheProvider,
+     *     error_tracking?: array{
+     *         enabled?: bool,
+     *         capture_errors?: bool,
+     *         excluded_exceptions?: list<class-string>,
+     *         max_frames?: int,
+     *         context_provider?: callable
+     *     }
+     * }|null $options Client and consumer configuration options.
+     * @param Client|null $client Preconfigured client instance. When provided, $apiKey, $options,
+     *     $personalAPIKey, and $secretKey are ignored.
+     * @param string|null $personalAPIKey Deprecated: use $secretKey instead. Kept as a
+     *     backwards-compatible alias for $secretKey.
+     * @param string|null $secretKey Credential for local feature flag evaluation and remote config.
+     *     Accepts either a Personal API Key (`phx_...`) or a Project Secret API Key (`phs_...`).
+     *     Defaults to null. When both $secretKey and $personalAPIKey are provided, $secretKey wins.
+     * @return void
      */
     public static function init(
         ?string $apiKey = null,
         ?array $options = [],
         ?Client $client = null,
-        ?string $personalAPIKey = null
+        ?string $personalAPIKey = null,
+        ?string $secretKey = null
     ): void {
         if (null === $client) {
-            $apiKey = $apiKey ?: getenv(self::ENV_API_KEY);
+            $options = $options ?? [];
+            $apiKey = StringNormalizer::normalizeOptional($apiKey);
+            if ($apiKey === null) {
+                $apiKey = self::tokenFromEnvironment();
+            }
 
+            $rawHost = null;
             if (array_key_exists("host", $options)) {
-                $options["host"] = self::cleanHost($options["host"]);
+                $rawHost = $options["host"];
+                $options["host"] = self::cleanHost($rawHost);
             } else {
                 $envHost = getenv(self::ENV_HOST) ?: null;
                 if (null !== $envHost) {
-                    $options["host"] = self::cleanHost(getenv(self::ENV_HOST));
+                    $rawHost = $envHost;
+                    $options["host"] = self::cleanHost($rawHost);
                 }
             }
 
-            self::assert($apiKey, "PostHog::init() requires an apiKey");
-            self::$client = new Client($apiKey, $options, null, $personalAPIKey);
+            // Infer ssl from the host protocol if the user hasn't explicitly set it
+            if ($rawHost !== null && !array_key_exists("ssl", $options)) {
+                $normalizedHost = StringNormalizer::normalizeHost($rawHost);
+                if (str_starts_with($normalizedHost, "http://")) {
+                    $options["ssl"] = false;
+                } elseif (str_starts_with($normalizedHost, "https://")) {
+                    $options["ssl"] = true;
+                }
+            }
+
+            self::$client = new Client($apiKey, $options, null, $personalAPIKey, secretKey: $secretKey);
         } else {
             self::$client = $client;
         }
     }
 
+    private static function tokenFromEnvironment(): ?string
+    {
+        foreach ([self::ENV_PROJECT_TOKEN, self::ENV_API_KEY] as $name) {
+            $value = getenv($name);
+            $token = $value === false ? null : StringNormalizer::normalizeOptional($value);
+            if ($token !== null) {
+                return $token;
+            }
+        }
+
+        return null;
+    }
+
     /**
-     * Captures a user action
+     * Captures an exception as a PostHog error tracking event.
      *
-     * @param array $message
-     * @return boolean whether the capture call succeeded
+     * @param \Throwable|string $exception The exception to capture or a plain string message.
+     * @param string|null $distinctId User ID; a random UUID is used when omitted (no person profile created).
+     * @param array<string, mixed> $additionalProperties Extra properties merged into the event.
+     * @param array{handled?: bool, mechanism?: string, source?: string} $options Framework boundary metadata.
+     *     Source is the concrete integration hook (e.g. laravel.middleware), not a mechanism category.
+     *     Only a non-empty string source is emitted; property bags cannot supply $exception_source.
+     * @return bool Whether the capture call succeeded.
+     * @throws Exception
+     */
+    public static function captureException(
+        \Throwable|string $exception,
+        ?string $distinctId = null,
+        array $additionalProperties = [],
+        array $options = []
+    ): bool {
+        self::checkClient();
+        return self::$client->captureException($exception, $distinctId, $additionalProperties, $options);
+    }
+
+    /**
+     * Captures a user action.
+     *
+     * @param array{
+     *     event: string,
+     *     distinctId?: string,
+     *     distinct_id?: string,
+     *     properties?: array<string, mixed>,
+     *     groups?: array<string, mixed>,
+     *     timestamp?: int|float|string|null,
+     *     uuid?: string,
+     *     flags?: FeatureFlagEvaluations,
+     *     send_feature_flags?: bool,
+     *     sendFeatureFlags?: bool,
+     *     disableGeoip?: bool
+     * } $message Event payload. If a top-level `uuid` is supplied it must be a valid UUID;
+     *     invalid values are replaced with a generated UUID v4. `send_feature_flags` and
+     *     `sendFeatureFlags` are deprecated; pass
+     *     a `flags` snapshot from evaluateFlags() instead. Deprecated top-level batch metadata is
+     *     stripped before sending: use `event` instead of `type`, `properties['$lib']` instead of
+     *     `library`, `properties['$lib_version']` instead of `library_version`, and
+     *     `properties['$lib_consumer']` instead of `library_consumer`. Legacy top-level SDK metadata
+     *     values are still used as fallbacks when the canonical property is absent; `type` is ignored.
+     *     Integer and float timestamps are Unix epoch seconds; strings must be parseable. Null or
+     *     invalid values use the current SDK time. Timestamps are converted to the equivalent UTC
+     *     instant before serialization. `disableGeoip` overrides the client setting (false by default).
+     * @return bool Whether the capture call succeeded.
      * @throws Exception
      */
     public static function capture(array $message)
@@ -56,7 +202,6 @@ class PostHog
         self::checkClient();
         $event = !empty($message["event"]);
         self::assert($event, "PostHog::capture() expects an event");
-        self::validate($message, "capture");
 
         return self::$client->capture($message);
     }
@@ -64,14 +209,21 @@ class PostHog
     /**
      * Tags properties about the user.
      *
-     * @param array $message
-     * @return boolean whether the identify call succeeded
+     * @param array{
+     *     distinctId?: string,
+     *     distinct_id?: string,
+     *     properties?: array<string, mixed>,
+     *     timestamp?: int|float|string|null,
+     *     disableGeoip?: bool
+     * } $message Integer and float timestamps are Unix epoch seconds; strings must be parseable.
+     *     Null or invalid values use the current SDK time. Timestamps are converted to the equivalent
+     *     UTC instant before serialization. `disableGeoip` overrides the client setting.
+     * @return bool Whether the identify call succeeded.
      * @throws Exception
      */
     public static function identify(array $message)
     {
         self::checkClient();
-        $message["type"] = "identify";
         self::validate($message, "identify");
 
         return self::$client->identify($message);
@@ -80,46 +232,44 @@ class PostHog
     /**
      * Adds properties to a group.
      *
-     * @param array $message Must contain keys `groupType`, `groupKey`, `properties`
-     * @return boolean whether the groupIdentify call succeeded
+     * @param array{
+     *     groupType: string,
+     *     groupKey: string,
+     *     properties?: array<string, mixed>,
+     *     distinctId?: string,
+     *     distinct_id?: string,
+     *     disableGeoip?: bool
+     * } $message Group identify payload. `distinctId`/`distinct_id` override the default synthetic ID.
+     *     `disableGeoip` overrides the client setting (false by default); true disables GeoIP enrichment.
+     * @return bool Whether the groupIdentify call succeeded.
      * @throws Exception
      */
     public static function groupIdentify(array $message)
     {
-        self::assert(!empty($message["groupType"]), "PostHog::groupIdentify() expects a groupType");
-        self::assert(!empty($message["groupKey"]), "PostHog::groupIdentify() expects a groupKey");
-
-        if (!isset($message["properties"])) {
-            $message["properties"] = array();
-        }
-
-        $msg = array(
-            "event" => "\$groupidentify",
-            "distinctId" => "\${$message['groupType']}_{$message['groupKey']}",
-            "properties" => array(
-                "\$group_type" => $message["groupType"],
-                "\$group_key" => $message["groupKey"],
-                "\$group_set" => $message["properties"],
-            )
-        );
-
-        return self::capture($msg);
+        self::checkClient();
+        self::assert(!empty($message['groupType']), 'PostHog::groupIdentify() expects a groupType');
+        self::assert(!empty($message['groupKey']), 'PostHog::groupIdentify() expects a groupKey');
+        return self::$client->groupIdentify($message);
     }
 
     /**
-     * decide if the feature flag is enabled for this distinct id.
+     * @deprecated Use `evaluateFlags($distinctId, ...)` and call
+     * `$flags->isEnabled($key)` instead. This consolidates flag evaluation into a single
+     * `/flags` request per incoming request.
      *
      * @param string $key
-     * @param string $distinctId
-     * @param array $groups
-     * @param array $personProperties
-     * @param array $groupProperties
-     * @return boolean
+     * @param string|null $distinctId Defaults to the current request context distinctId, when set.
+     * @param array<string, mixed> $groups
+     * @param array<string, mixed> $personProperties
+     * @param array<string, array<string, mixed>> $groupProperties
+     * @param bool $onlyEvaluateLocally Whether to avoid a remote /flags fallback.
+     * @param bool $sendFeatureFlagEvents Whether to send $feature_flag_called events.
+     * @return bool|null
      * @throws Exception
      */
     public static function isFeatureEnabled(
         string $key,
-        string $distinctId,
+        ?string $distinctId = null,
         array $groups = array(),
         array $personProperties = array(),
         array $groupProperties = array(),
@@ -139,19 +289,23 @@ class PostHog
     }
 
     /**
-     * get the feature flag value for this distinct id.
+     * @deprecated Use `evaluateFlags($distinctId, ...)` and call
+     * `$flags->getFlag($key)` instead. This consolidates flag evaluation into a single
+     * `/flags` request per incoming request.
      *
      * @param string $key
-     * @param string $distinctId
-     * @param array $groups
-     * @param array $personProperties
-     * @param array $groupProperties
-     * @return boolean | string
+     * @param string|null $distinctId Defaults to the current request context distinctId, when set.
+     * @param array<string, mixed> $groups
+     * @param array<string, mixed> $personProperties
+     * @param array<string, array<string, mixed>> $groupProperties
+     * @param bool $onlyEvaluateLocally Whether to avoid a remote /flags fallback.
+     * @param bool $sendFeatureFlagEvents Whether to send $feature_flag_called events.
+     * @return bool|string|null
      * @throws Exception
      */
     public static function getFeatureFlag(
         string $key,
-        string $distinctId,
+        ?string $distinctId = null,
         array $groups = array(),
         array $personProperties = array(),
         array $groupProperties = array(),
@@ -171,20 +325,65 @@ class PostHog
     }
 
     /**
+     * @deprecated Use `evaluateFlags($distinctId, ...)` and call `$flags->getFlag($key)` and
+     * `$flags->getFlagPayload($key)` instead. This consolidates flag evaluation into a single
+     * `/flags` request per incoming request.
+     *
+     * @param string $key Feature flag key.
+     * @param string|null $distinctId Defaults to the current request context distinctId, when set.
+     * @param array<string, mixed> $groups Group identifiers for group-based flags.
+     * @param array<string, mixed> $personProperties Person properties to use for flag evaluation.
+     * @param array<string, array<string, mixed>> $groupProperties Group properties to use for flag evaluation.
+     * @param bool $onlyEvaluateLocally Whether to avoid a remote /flags fallback.
+     * @param bool $sendFeatureFlagEvents Whether to send $feature_flag_called events.
+     * @return FeatureFlagResult|null
+     * @throws Exception
+     */
+    public static function getFeatureFlagResult(
+        string $key,
+        ?string $distinctId = null,
+        array $groups = array(),
+        array $personProperties = array(),
+        array $groupProperties = array(),
+        bool $onlyEvaluateLocally = false,
+        bool $sendFeatureFlagEvents = true
+    ): ?FeatureFlagResult {
+        self::checkClient();
+        return self::$client->getFeatureFlagResult(
+            $key,
+            $distinctId,
+            $groups,
+            $personProperties,
+            $groupProperties,
+            $onlyEvaluateLocally,
+            $sendFeatureFlagEvents
+        );
+    }
+
+    /**
+     * @deprecated Use `evaluateFlags($distinctId, ...)` and call
+     * `$flags->getFlagPayload($key)` instead. This consolidates flag evaluation into a single
+     * `/flags` request per incoming request.
+     *
+     * A remote config flag with an encrypted payload is not available here; use
+     * `getRemoteConfigPayload()` for it.
+     *
      * @param string $key
-     * @param string $distinctId
-     * @param array $groups
-     * @param array $personProperties
-     * @param array $groupProperties
+     * @param string|null $distinctId Defaults to the current request context distinctId, when set.
+     * @param array<string, mixed> $groups
+     * @param array<string, mixed> $personProperties
+     * @param array<string, array<string, mixed>> $groupProperties
      * @return mixed
      */
     public static function getFeatureFlagPayload(
         string $key,
-        string $distinctId,
+        ?string $distinctId = null,
         array $groups = array(),
         array $personProperties = array(),
         array $groupProperties = array(),
     ): mixed {
+        self::checkClient();
+
         return self::$client->getFeatureFlagPayload(
             $key,
             $distinctId,
@@ -195,17 +394,78 @@ class PostHog
     }
 
     /**
-     * get all enabled flags for distinct_id
+     * Fetch the payload of a remote config feature flag by key, with no distinct ID. Use this
+     * instead of `evaluateFlags()->getFlagPayload()` (or the deprecated `getFeatureFlagPayload()`)
+     * for a remote config flag, and always when its payload is encrypted: flag evaluation leaves a
+     * remote config flag with an encrypted payload out of its response. Needs the `secretKey`
+     * option.
      *
-     * @param string $distinctId
-     * @param array $groups
-     * @param array $personProperties
-     * @param array $groupProperties
-     * @return array
+     * See Client::getRemoteConfigPayload() for the key types and failure behavior.
+     *
+     * @param string $key Feature flag key.
+     * @return mixed The decoded payload, or null when no payload could be read.
+     */
+    public static function getRemoteConfigPayload(string $key): mixed
+    {
+        self::checkClient();
+
+        return self::$client->getRemoteConfigPayload($key);
+    }
+
+    /**
+     * Evaluate every feature flag for a distinct id in a single round trip and return a snapshot.
+     * When distinctId is omitted, the current request context distinctId is used if available.
+     * Pass the snapshot to capture() via the `flags` key to attach $feature/<key> properties
+     * without making another /flags request.
+     *
+     * @param string|null $distinctId Defaults to the current request context distinctId, when set.
+     * @param array<string, mixed> $groups Group identifiers for group-based flags.
+     * @param array<string, mixed> $personProperties Person properties to use for flag evaluation.
+     * @param array<string, array<string, mixed>> $groupProperties Group properties to use for flag evaluation.
+     * @param bool $onlyEvaluateLocally Whether to avoid a remote /flags fallback.
+     * @param bool|null $disableGeoip Override GeoIP enrichment; null inherits the client setting.
+     * @param list<string>|null $flagKeys Optional list of flag keys. When provided, only these
+     *     flags are evaluated — the underlying /flags request asks the server for just this
+     *     subset, which makes the response smaller and the request cheaper. Use this when you
+     *     only need a handful of flags out of many. Distinct from FeatureFlagEvaluations::only(),
+     *     which scopes which already-evaluated flags get attached to a captured event.
+     * @return FeatureFlagEvaluations
+     * @throws Exception
+     */
+    public static function evaluateFlags(
+        ?string $distinctId = null,
+        array $groups = array(),
+        array $personProperties = array(),
+        array $groupProperties = array(),
+        bool $onlyEvaluateLocally = false,
+        ?bool $disableGeoip = null,
+        ?array $flagKeys = null
+    ): FeatureFlagEvaluations {
+        self::checkClient();
+        return self::$client->evaluateFlags(
+            $distinctId,
+            $groups,
+            $personProperties,
+            $groupProperties,
+            $onlyEvaluateLocally,
+            $disableGeoip,
+            $flagKeys
+        );
+    }
+
+    /**
+     * Get all enabled flags for a distinct id.
+     *
+     * @param string|null $distinctId Defaults to the current request context distinctId, when set.
+     * @param array<string, mixed> $groups
+     * @param array<string, mixed> $personProperties
+     * @param array<string, array<string, mixed>> $groupProperties
+     * @param bool $onlyEvaluateLocally Whether to avoid a remote /flags fallback.
+     * @return array<string, bool|string>
      * @throws Exception
      */
     public static function getAllFlags(
-        string $distinctId,
+        ?string $distinctId = null,
         array $groups = array(),
         array $personProperties = array(),
         array $groupProperties = array(),
@@ -223,10 +483,11 @@ class PostHog
 
 
     /**
+     * Fetch all feature flag variants for a distinct id from the remote /flags endpoint.
      *
-     * @param string $distinctId
-     * @return array
-     * @throws Exception
+     * @param string $distinctId The user's distinct ID.
+     * @param array<string, mixed> $groups Group identifiers for group-based flags.
+     * @return array<string, bool|string>
      */
     public static function fetchFeatureVariants(string $distinctId, array $groups = array()): array
     {
@@ -235,10 +496,19 @@ class PostHog
     }
 
     /**
-     * Aliases the distinct id from a temporary id to a permanent one
+     * Aliases the distinct id from a temporary id to a permanent one.
      *
-     * @param array $message distinct id to alias from
-     * @return boolean whether the alias call succeeded
+     * @param array{
+     *     distinctId?: string,
+     *     distinct_id?: string,
+     *     alias: string,
+     *     properties?: array<string, mixed>,
+     *     timestamp?: int|float|string|null,
+     *     disableGeoip?: bool
+     * } $message Integer and float timestamps are Unix epoch seconds; strings must be parseable.
+     *     Null or invalid values use the current SDK time. Timestamps are converted to the equivalent
+     *     UTC instant before serialization. `disableGeoip` overrides the client setting.
+     * @return bool Whether the alias call succeeded.
      * @throws Exception
      */
     public static function alias(array $message)
@@ -252,13 +522,98 @@ class PostHog
     }
 
     /**
-     * Send a raw (prepared) message
+     * Run a callback with request context applied to all captures in the callback.
      *
-     * @param array $message distinct id to alias from
-     * @return boolean whether the alias call succeeded
+     * Prefer this over enterContext() whenever the work can be wrapped in a callback: the
+     * previous context is restored when the callback returns or throws.
+     *
+     * @param array{
+     *     distinctId?: string,
+     *     distinct_id?: string,
+     *     sessionId?: string,
+     *     session_id?: string,
+     *     properties?: array<string, mixed>
+     * } $data
+     * @param callable $fn Callback to run while the context is active.
+     * @param array{fresh?: bool} $options Use `fresh => true` to avoid inheriting the current context.
+     * @return mixed
+     * @throws Exception When the client has not been initialized.
+     * @throws \Throwable Re-throws any exception thrown by $fn after restoring context.
+     */
+    public static function withContext(array $data, callable $fn, array $options = []): mixed
+    {
+        self::checkClient();
+        return self::$client->withContext($data, $fn, $options);
+    }
+
+    /**
+     * Apply request context until the returned scope is closed.
+     *
+     * Use this only when the work starts and ends in separate callbacks, such as framework
+     * lifecycle events or before/after middleware hooks; otherwise prefer withContext().
+     * Retain the returned scope: discarding it immediately closes the context.
+     * Close the scope on every exit path, including failures. An unclosed scope leaks its context
+     * into later work until the scope is garbage-collected. Closing a scope is idempotent.
+     *
+     * ```php
+     * // Job started callback
+     * $this->scope = PostHog::enterContext(['distinctId' => $userId]);
+     *
+     * // Job finished or failed callback
+     * $this->scope?->close();
+     * $this->scope = null;
+     * ```
+     *
+     * @param array{
+     *     distinctId?: string,
+     *     distinct_id?: string,
+     *     sessionId?: string,
+     *     session_id?: string,
+     *     properties?: array<string, mixed>
+     * } $data
+     * @param array{fresh?: bool} $options Use `fresh => true` to avoid inheriting the current context.
+     * @throws Exception When the client has not been initialized.
+     */
+    public static function enterContext(array $data, array $options = []): ContextScope
+    {
+        self::checkClient();
+        return self::$client->enterContext($data, $options);
+    }
+
+    /**
+     * Get the currently active request context for this client, if any.
+     *
+     * @return array{distinctId?: string|null, sessionId?: string|null, properties: array<string, mixed>}|null
+     * @throws Exception
+     */
+    public static function getContext(): ?array
+    {
+        self::checkClient();
+        return self::$client->getContext();
+    }
+
+    /**
+     * Extract PostHog frontend tracing context from HTTP headers.
+     *
+     * @param array<string, mixed> $headers HTTP headers, including $_SERVER-style HTTP_* keys.
+     * @return array{distinctId?: string|null, sessionId?: string|null, properties: array<string, mixed>}
+     */
+    public static function contextFromHeaders(array $headers): array
+    {
+        return RequestContext::contextFromHeaders($headers);
+    }
+
+    /**
+     * Send a raw, already-prepared message to the underlying consumer queue.
+     *
+     * @param array<string, mixed> $message Prepared message payload. If a top-level `uuid` is supplied
+     *     it must be a valid UUID; invalid values are replaced with a generated UUID v4.
+     * @return mixed Whether the underlying consumer accepted the message.
      */
     public static function raw(array $message)
     {
+        self::checkClient();
+
         return self::$client->raw($message);
     }
 
@@ -266,25 +621,54 @@ class PostHog
     /**
      * Validate common properties.
      *
-     * @param array $msg
+     * @internal
+     * @param array<string, mixed> $msg
      * @param string $type
+     * @return void
      * @throws Exception
      */
     public static function validate($msg, $type)
     {
-        $distinctId = !empty($msg["distinctId"]);
+        $distinctId = !empty($msg["distinctId"]) || !empty($msg["distinct_id"]);
         self::assert($distinctId, "PostHog::{$type}() requires distinctId");
     }
 
     /**
-     * Flush the client
+     * Flush queued events on the underlying client.
+     *
+     * @return bool True when flushing succeeded or the consumer has no flush operation.
+     * @throws Exception
      */
-
     public static function flush()
     {
         self::checkClient();
 
         return self::$client->flush();
+    }
+
+    /**
+     * Flush queued events and release resources on the underlying client.
+     *
+     * @return bool True when shutdown flushing succeeded or the consumer has no flush operation.
+     * @throws Exception
+     */
+    public static function shutdown(): bool
+    {
+        self::checkClient();
+
+        return self::$client->shutdown();
+    }
+
+    /**
+     * Transactional email on the default client. See Client::emails().
+     *
+     * @return Emails
+     */
+    public static function emails(): Emails
+    {
+        self::checkClient();
+
+        return self::$client->emails();
     }
 
     /**
@@ -303,9 +687,8 @@ class PostHog
 
     private static function cleanHost(?string $host): string
     {
-        if (!isset($host)) {
-            return $host;
-        }
+        $host = StringNormalizer::normalizeHost($host);
+
         // remove protocol
         if (substr($host, 0, 8) === "https://") {
             $host = str_replace('https://', '', $host);
@@ -322,17 +705,17 @@ class PostHog
     }
 
     /**
-     * Check the client.
-     *
-     * @throws Exception
+     * Ensure the default client exists. If init() was never called, install a disabled no-op client
+     * so public SDK methods do not throw into the host application.
      */
     private static function checkClient()
     {
-        if (null != self::$client) {
+        if (isset(self::$client)) {
             return;
         }
 
-        throw new Exception("PostHog::init() must be called before any other capturing method.");
+        error_log('[PostHog] PostHog::init() was not called; SDK will no-op.');
+        self::$client = new Client(null, array('consumer' => 'noop'), null, null, false);
     }
 
     /**
